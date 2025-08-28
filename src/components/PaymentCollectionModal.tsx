@@ -11,6 +11,7 @@ import {
   TextInput,
   Platform,
   Image,
+  Animated,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { LinearGradient } from 'react-native-linear-gradient';
@@ -40,6 +41,7 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalHeight] = useState(new Animated.Value(0));
 
   // Cash payment fields
   const [cashAmount, setCashAmount] = useState('');
@@ -444,6 +446,47 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
     </View>
   );
 
+  // Calculate dynamic height based on payment type and content
+  const getModalHeight = () => {
+    const baseHeight = 60; // Base height in percentage
+    
+    switch (paymentType) {
+      case 'cash':
+        return '45%'; // Cash payment is simple, needs less space
+      case 'cheque':
+        // Adjust height based on number of cheques
+        if (cheques.length === 1) return '65%';
+        if (cheques.length === 2) return '75%';
+        if (cheques.length === 3) return '85%';
+        return '90%'; // For 4+ cheques
+      case 'bank_deposit':
+        return '60%'; // Bank deposit needs moderate space
+      default:
+        return '55%';
+    }
+  };
+
+  // Animate height changes
+  const animateHeight = (newHeight: string) => {
+    const heightValue = parseInt(newHeight) / 100; // Convert percentage to decimal
+    Animated.timing(modalHeight, {
+      toValue: heightValue,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  // Update height when payment type or number of cheques changes
+  useEffect(() => {
+    if (visible) {
+      const height = getModalHeight();
+      animateHeight(height);
+    } else {
+      // Reset height when modal closes
+      modalHeight.setValue(0);
+    }
+  }, [paymentType, cheques.length, visible]);
+
   return (
     <Modal
       visible={visible}
@@ -452,7 +495,15 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.paymentModal}>
+        <Animated.View style={[
+          styles.paymentModal, 
+          { 
+            height: modalHeight.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['0%', '90%']
+            })
+          }
+        ]}>
           <LinearGradient
             colors={['#667eea', '#764ba2']}
             style={styles.header}
@@ -466,7 +517,10 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
           <ScrollView 
             style={styles.content} 
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1 }}
+            contentContainerStyle={{ 
+              flexGrow: 1,
+              paddingBottom: paymentType === 'cheque' && cheques.length > 2 ? 20 : 0
+            }}
           >
             {/* Payment Type Selection */}
             <View style={styles.section}>
@@ -531,7 +585,7 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
               )}
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -547,7 +601,6 @@ const styles = StyleSheet.create({
   paymentModal: {
     width: '90%',
     maxWidth: 400,
-    maxHeight: '90%',
     backgroundColor: '#fff',
     borderRadius: 20,
     overflow: 'hidden',

@@ -466,279 +466,281 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
-            <View style={styles.documentsModal}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Customer Documents</Text>
-                <TouchableOpacity 
-                  style={styles.closeButton}
-                  onPress={onClose}
-                >
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {/* Documents Count */}
-              <View style={styles.documentsCountContainer}>
-                <Text style={styles.documentsCountText}>
-                  {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
-                </Text>
-              </View>
-              
-              {/* Documents Review Section */}
-              <View style={styles.documentsSection}>
-                <Text style={styles.documentsSectionTitle}>
-                  📋 Review Documents ({documents.length})
-                </Text>
-              </View>
-              
-              <ScrollView style={styles.documentsList}>
-                {isLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4A90E2" />
-                    <Text style={styles.loadingText}>Loading documents...</Text>
+    <>
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+              <View style={styles.documentsModal}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Customer Documents</Text>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={onClose}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Documents Count */}
+                <View style={styles.documentsCountContainer}>
+                  <Text style={styles.documentsCountText}>
+                    {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
+                  </Text>
+                </View>
+                
+                {/* Documents Review Section */}
+                <View style={styles.documentsSection}>
+                  <Text style={styles.documentsSectionTitle}>
+                    📋 Review Documents ({documents.length})
+                  </Text>
+                </View>
+                
+                <ScrollView style={styles.documentsList}>
+                  {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color="#4A90E2" />
+                      <Text style={styles.loadingText}>Loading documents...</Text>
+                    </View>
+                  ) : documents.length === 0 ? (
+                    <View style={styles.noDocumentsContainer}>
+                      <Text style={styles.noDocumentsIcon}>📁</Text>
+                      <Text style={styles.noDocumentsText}>No documents uploaded yet</Text>
+                      <Text style={styles.noDocumentsSubtext}>
+                        Upload documents related to this customer
+                      </Text>
+                    </View>
+                  ) : (
+                    documents.map((document) => (
+                      <TouchableOpacity 
+                        key={document.id} 
+                        style={styles.documentItem}
+                        onPress={() => openFileViewer(document)}
+                        onLongPress={() => openDocument(document)}
+                      >
+                        <View style={styles.documentIcon}>
+                          <Text style={styles.documentIconText}>
+                            {getDocumentIcon(document.fileType)}
+                          </Text>
+                        </View>
+                        <View style={styles.documentInfo}>
+                          <Text style={styles.documentName} numberOfLines={1}>
+                            {document.originalName}
+                          </Text>
+                          <Text style={styles.documentMeta}>
+                            {document.fileType.toUpperCase()} • {formatFileSize(document.fileSize)} • {formatDate(document.createdAt)}
+                          </Text>
+                          {document.description && (
+                            <Text style={styles.documentDescription} numberOfLines={2}>
+                              📝 {document.description}
+                            </Text>
+                          )}
+                          <Text style={styles.documentUploader}>
+                            👤 {document.uploadedBy} • 💾 Local Storage
+                          </Text>
+                        </View>
+                        <View style={styles.documentActions}>
+                          <TouchableOpacity 
+                            style={styles.viewButton}
+                            onPress={() => openDocument(document)}
+                          >
+                            <Text style={styles.viewButtonText}>👁️</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.deleteButton}
+                            onPress={() => deleteDocument(document.id)}
+                          >
+                            <Text style={styles.deleteButtonText}>🗑️</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </ScrollView>
+                
+                <View style={styles.uploadSection}>
+                  <Text style={styles.uploadSectionTitle}>
+                    Upload Files (Demo Mode) {selectedFiles.length > 0 ? `(${selectedFiles.length}/10)` : ''}
+                  </Text>
+                  
+                  {/* File Selection Box */}
+                  <View style={styles.fileSelectionBox}>
+                    {selectedFiles.length === 0 ? (
+                      <TouchableOpacity 
+                        style={styles.fileDropZone}
+                        onPress={pickDocument}
+                      >
+                        <Text style={styles.fileDropZoneIcon}>📁</Text>
+                        <Text style={styles.fileDropZoneTitle}>Select Files (Demo)</Text>
+                        <Text style={styles.fileDropZoneSubtitle}>
+                          Tap to choose multiple images or documents (saved locally)
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.selectedFilesContainer}>
+                        {selectedFiles.map((file, index) => (
+                          <View key={file.id} style={styles.selectedFileItem}>
+                            <View style={styles.selectedFileIcon}>
+                              <Text style={styles.selectedFileIconText}>
+                                {getDocumentIcon(file.type)}
+                              </Text>
+                            </View>
+                            <View style={styles.selectedFileInfo}>
+                              <Text style={styles.selectedFileName} numberOfLines={1}>
+                                {file.name}
+                              </Text>
+                              <Text style={styles.selectedFileMeta}>
+                                {formatFileSize(file.size)} • {file.type}
+                              </Text>
+                            </View>
+                            <TouchableOpacity 
+                              style={styles.removeFileButton}
+                              onPress={() => setSelectedFiles(prev => prev.filter(f => f.id !== file.id))}
+                            >
+                              <Text style={styles.removeFileButtonText}>✕</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                        
+                        {/* Add More Files Button */}
+                        {selectedFiles.length < 10 && (
+                          <TouchableOpacity 
+                            style={styles.addMoreFilesButton}
+                            onPress={pickDocument}
+                          >
+                            <Text style={styles.addMoreFilesIcon}>➕</Text>
+                            <Text style={styles.addMoreFilesText}>Add More Files</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    )}
                   </View>
-                ) : documents.length === 0 ? (
-                  <View style={styles.noDocumentsContainer}>
-                    <Text style={styles.noDocumentsIcon}>📁</Text>
-                    <Text style={styles.noDocumentsText}>No documents uploaded yet</Text>
-                    <Text style={styles.noDocumentsSubtext}>
-                      Upload documents related to this customer
-                    </Text>
-                  </View>
-                ) : (
-                  documents.map((document) => (
-                    <TouchableOpacity 
-                      key={document.id} 
-                      style={styles.documentItem}
-                      onPress={() => openFileViewer(document)}
-                      onLongPress={() => openDocument(document)}
-                    >
+
+                  {/* Description Input */}
+                  <TextInput
+                    style={styles.descriptionInput}
+                    placeholder="Document description (optional)"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    numberOfLines={2}
+                  />
+
+                  {/* Upload Button */}
+                  <TouchableOpacity 
+                    style={[
+                      styles.uploadButton, 
+                      (selectedFiles.length === 0 || isUploading) && styles.uploadButtonDisabled
+                    ]}
+                    onPress={selectedFiles.length > 0 ? uploadDocument : pickDocument}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                        <Text style={styles.uploadButtonText}>Uploading...</Text>
+                      </>
+                    ) : selectedFiles.length > 0 ? (
+                      <>
+                        <Text style={styles.uploadButtonIcon}>📤</Text>
+                        <Text style={styles.uploadButtonText}>Upload Documents</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.uploadButtonIcon}>📁</Text>
+                        <Text style={styles.uploadButtonText}>Select Document</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Edit Document Modal */}
+      <Modal
+        visible={editingDocument !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditingDocument(null)}
+      >
+        <TouchableWithoutFeedback onPress={() => setEditingDocument(null)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+              <View style={styles.editModal}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>✏️ Edit Document</Text>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setEditingDocument(null)}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {editingDocument && (
+                  <View style={styles.editContent}>
+                    <View style={styles.documentPreview}>
                       <View style={styles.documentIcon}>
                         <Text style={styles.documentIconText}>
-                          {getDocumentIcon(document.fileType)}
+                          {getDocumentIcon(editingDocument.fileType)}
                         </Text>
                       </View>
                       <View style={styles.documentInfo}>
-                        <Text style={styles.documentName} numberOfLines={1}>
-                          {document.originalName}
-                        </Text>
+                        <Text style={styles.documentName}>{editingDocument.originalName}</Text>
                         <Text style={styles.documentMeta}>
-                          {document.fileType.toUpperCase()} • {formatFileSize(document.fileSize)} • {formatDate(document.createdAt)}
-                        </Text>
-                        {document.description && (
-                          <Text style={styles.documentDescription} numberOfLines={2}>
-                            📝 {document.description}
-                          </Text>
-                        )}
-                        <Text style={styles.documentUploader}>
-                          👤 {document.uploadedBy} • 💾 Local Storage
+                          {editingDocument.fileType.toUpperCase()} • {formatFileSize(editingDocument.fileSize)}
                         </Text>
                       </View>
-                      <View style={styles.documentActions}>
-                        <TouchableOpacity 
-                          style={styles.viewButton}
-                          onPress={() => openDocument(document)}
-                        >
-                          <Text style={styles.viewButtonText}>👁️</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={styles.deleteButton}
-                          onPress={() => deleteDocument(document.id)}
-                        >
-                          <Text style={styles.deleteButtonText}>🗑️</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
-                  ))
+                    </View>
+                    
+                    <Text style={styles.editLabel}>Description:</Text>
+                    <TextInput
+                      style={styles.editDescriptionInput}
+                      placeholder="Enter document description..."
+                      value={editDescription}
+                      onChangeText={setEditDescription}
+                      multiline
+                      numberOfLines={3}
+                      placeholderTextColor="#999"
+                    />
+                    
+                    <View style={styles.editActions}>
+                      <TouchableOpacity 
+                        style={styles.cancelButton}
+                        onPress={() => {
+                          setEditingDocument(null);
+                          setEditDescription('');
+                        }}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.saveButton}
+                        onPress={() => {
+                          if (editingDocument) {
+                            updateDocument(editingDocument.id, editDescription);
+                          }
+                        }}
+                      >
+                        <Text style={styles.saveButtonText}>Save Changes</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 )}
-              </ScrollView>
-              
-              <View style={styles.uploadSection}>
-                <Text style={styles.uploadSectionTitle}>
-                  Upload Files (Demo Mode) {selectedFiles.length > 0 ? `(${selectedFiles.length}/10)` : ''}
-                </Text>
-                
-                {/* File Selection Box */}
-                <View style={styles.fileSelectionBox}>
-                  {selectedFiles.length === 0 ? (
-                    <TouchableOpacity 
-                      style={styles.fileDropZone}
-                      onPress={pickDocument}
-                    >
-                      <Text style={styles.fileDropZoneIcon}>📁</Text>
-                      <Text style={styles.fileDropZoneTitle}>Select Files (Demo)</Text>
-                      <Text style={styles.fileDropZoneSubtitle}>
-                        Tap to choose multiple images or documents (saved locally)
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.selectedFilesContainer}>
-                      {selectedFiles.map((file, index) => (
-                        <View key={file.id} style={styles.selectedFileItem}>
-                          <View style={styles.selectedFileIcon}>
-                            <Text style={styles.selectedFileIconText}>
-                              {getDocumentIcon(file.type)}
-                            </Text>
-                          </View>
-                          <View style={styles.selectedFileInfo}>
-                            <Text style={styles.selectedFileName} numberOfLines={1}>
-                              {file.name}
-                            </Text>
-                            <Text style={styles.selectedFileMeta}>
-                              {formatFileSize(file.size)} • {file.type}
-                            </Text>
-                          </View>
-                          <TouchableOpacity 
-                            style={styles.removeFileButton}
-                            onPress={() => setSelectedFiles(prev => prev.filter(f => f.id !== file.id))}
-                          >
-                            <Text style={styles.removeFileButtonText}>✕</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                      
-                                             {/* Add More Files Button */}
-                       {selectedFiles.length < 10 && (
-                         <TouchableOpacity 
-                           style={styles.addMoreFilesButton}
-                           onPress={pickDocument}
-                         >
-                           <Text style={styles.addMoreFilesIcon}>➕</Text>
-                           <Text style={styles.addMoreFilesText}>Add More Files</Text>
-                         </TouchableOpacity>
-                       )}
-                    </View>
-                  )}
-                </View>
-
-                {/* Description Input */}
-                <TextInput
-                  style={styles.descriptionInput}
-                  placeholder="Document description (optional)"
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  numberOfLines={2}
-                />
-
-                {/* Upload Button */}
-                <TouchableOpacity 
-                  style={[
-                    styles.uploadButton, 
-                    (selectedFiles.length === 0 || isUploading) && styles.uploadButtonDisabled
-                  ]}
-                  onPress={selectedFiles.length > 0 ? uploadDocument : pickDocument}
-                  disabled={isUploading}
-                >
-                  {isUploading ? (
-                    <>
-                      <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
-                      <Text style={styles.uploadButtonText}>Uploading...</Text>
-                    </>
-                  ) : selectedFiles.length > 0 ? (
-                    <>
-                      <Text style={styles.uploadButtonIcon}>📤</Text>
-                      <Text style={styles.uploadButtonText}>Upload Documents</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.uploadButtonIcon}>📁</Text>
-                      <Text style={styles.uploadButtonText}>Select Document</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
               </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-
-    {/* Edit Document Modal */}
-    <Modal
-      visible={editingDocument !== null}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => setEditingDocument(null)}
-    >
-      <TouchableWithoutFeedback onPress={() => setEditingDocument(null)}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
-            <View style={styles.editModal}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>✏️ Edit Document</Text>
-                <TouchableOpacity 
-                  style={styles.closeButton}
-                  onPress={() => setEditingDocument(null)}
-                >
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {editingDocument && (
-                <View style={styles.editContent}>
-                  <View style={styles.documentPreview}>
-                    <View style={styles.documentIcon}>
-                      <Text style={styles.documentIconText}>
-                        {getDocumentIcon(editingDocument.fileType)}
-                      </Text>
-                    </View>
-                    <View style={styles.documentInfo}>
-                      <Text style={styles.documentName}>{editingDocument.originalName}</Text>
-                      <Text style={styles.documentMeta}>
-                        {editingDocument.fileType.toUpperCase()} • {formatFileSize(editingDocument.fileSize)}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <Text style={styles.editLabel}>Description:</Text>
-                  <TextInput
-                    style={styles.editDescriptionInput}
-                    placeholder="Enter document description..."
-                    value={editDescription}
-                    onChangeText={setEditDescription}
-                    multiline
-                    numberOfLines={3}
-                    placeholderTextColor="#999"
-                  />
-                  
-                  <View style={styles.editActions}>
-                    <TouchableOpacity 
-                      style={styles.cancelButton}
-                      onPress={() => {
-                        setEditingDocument(null);
-                        setEditDescription('');
-                      }}
-                    >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.saveButton}
-                      onPress={() => {
-                        if (editingDocument) {
-                          updateDocument(editingDocument.id, editDescription);
-                        }
-                      }}
-                    >
-                      <Text style={styles.saveButtonText}>Save Changes</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </>
   );
 };
 

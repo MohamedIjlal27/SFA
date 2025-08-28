@@ -16,6 +16,7 @@ import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { customerDetailService, Document } from '../services/customerDetailService';
 import PermissionService from '../services/permissionService';
+import { check, PERMISSIONS } from 'react-native-permissions';
 
 
 
@@ -83,12 +84,14 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
   const takePhoto = async () => {
     const permissionService = PermissionService.getInstance();
-    const hasPermission = permissionService.getPermissionStatus().camera;
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Camera permission is required. Please grant permission in Settings.');
-      permissionService.showPermissionSettingsAlert();
-      return;
-    }
+    try {
+      // Check camera permission dynamically
+      const cameraPermission = await check(PERMISSIONS.ANDROID.CAMERA);
+      if (cameraPermission !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera permission is required. Please grant permission in Settings.');
+        permissionService.showPermissionSettingsAlert();
+        return;
+      }
 
     const options = {
       mediaType: 'photo' as const,
@@ -97,17 +100,6 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       saveToPhotos: true,
     };
 
-    try {
-      const result = await launchCamera(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        await uploadDocument({
-          uri: file.uri,
-          type: file.type || 'image/jpeg',
-          name: file.fileName || `photo_${Date.now()}.jpg`,
-          size: file.fileSize || 0,
-        });
-      }
     } catch (error) {
       console.error('Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');
@@ -116,12 +108,14 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
   const pickImage = async () => {
     const permissionService = PermissionService.getInstance();
-    const hasPermission = permissionService.getPermissionStatus().storage;
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
-      permissionService.showPermissionSettingsAlert();
-      return;
-    }
+    try {
+      // Check storage permission dynamically
+      const storagePermission = await check(PERMISSIONS.ANDROID.READ_MEDIA_IMAGES);
+      if (storagePermission !== 'granted') {
+        Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
+        permissionService.showPermissionSettingsAlert();
+        return;
+      }
 
     const options = {
       mediaType: 'photo' as const,
@@ -131,17 +125,6 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       includeExtra: true,
     };
 
-    try {
-      const result = await launchImageLibrary(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        await uploadDocument({
-          uri: file.uri,
-          type: file.type || 'image/jpeg',
-          name: file.fileName || `image_${Date.now()}.jpg`,
-          size: file.fileSize || 0,
-        });
-      }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
@@ -150,12 +133,14 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
   const pickDocumentFile = async () => {
     const permissionService = PermissionService.getInstance();
-    const hasPermission = permissionService.getPermissionStatus().storage;
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
-      permissionService.showPermissionSettingsAlert();
-      return;
-    }
+    try {
+      // Check storage permission dynamically
+      const storagePermission = await check(PERMISSIONS.ANDROID.READ_MEDIA_IMAGES);
+      if (storagePermission !== 'granted') {
+        Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
+        permissionService.showPermissionSettingsAlert();
+        return;
+      }
 
     const options = {
       mediaType: 'mixed' as const,
@@ -166,30 +151,6 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       includeExtra: true,
     };
 
-    try {
-      const result = await launchImageLibrary(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        
-        // Handle different file types properly
-        let fileType = file.type || 'application/octet-stream';
-        let fileName = file.fileName || `document_${Date.now()}`;
-        
-        // Ensure proper file extension
-        if (file.uri && file.uri.toLowerCase().includes('.pdf')) {
-          fileType = 'application/pdf';
-          if (!fileName.toLowerCase().endsWith('.pdf')) {
-            fileName += '.pdf';
-          }
-        }
-        
-        await uploadDocument({
-          uri: file.uri,
-          type: fileType,
-          name: fileName,
-          size: file.fileSize || 0,
-        });
-      }
     } catch (error) {
       console.error('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document. Please try again.');

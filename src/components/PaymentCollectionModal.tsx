@@ -16,6 +16,7 @@ import {
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { LinearGradient } from 'react-native-linear-gradient';
 import PermissionService from '../services/permissionService';
+import { check, PERMISSIONS } from 'react-native-permissions';
 
 interface ChequeDetails {
   chequeNumber: string;
@@ -96,12 +97,14 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
 
   const takeChequePhoto = async (index: number) => {
     const permissionService = PermissionService.getInstance();
-    const hasPermission = permissionService.getPermissionStatus().camera;
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Camera permission is required. Please grant permission in Settings.');
-      permissionService.showPermissionSettingsAlert();
-      return;
-    }
+    try {
+      // Check camera permission dynamically
+      const cameraPermission = await check(PERMISSIONS.ANDROID.CAMERA);
+      if (cameraPermission !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera permission is required. Please grant permission in Settings.');
+        permissionService.showPermissionSettingsAlert();
+        return;
+      }
 
     const options = {
       mediaType: 'photo' as const,
@@ -110,12 +113,6 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
       saveToPhotos: true,
     };
 
-    try {
-      const result = await launchCamera(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        updateChequeField(index, 'imageUri', file.uri || '');
-      }
     } catch (error) {
       console.error('Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');
@@ -152,12 +149,14 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
 
   const takeSlipPhoto = async () => {
     const permissionService = PermissionService.getInstance();
-    const hasPermission = permissionService.getPermissionStatus().camera;
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Camera permission is required. Please grant permission in Settings.');
-      permissionService.showPermissionSettingsAlert();
-      return;
-    }
+    try {
+      // Check camera permission dynamically
+      const cameraPermission = await check(PERMISSIONS.ANDROID.CAMERA);
+      if (cameraPermission !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera permission is required. Please grant permission in Settings.');
+        permissionService.showPermissionSettingsAlert();
+        return;
+      }
 
     const options = {
       mediaType: 'photo' as const,
@@ -166,12 +165,6 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
       saveToPhotos: true,
     };
 
-    try {
-      const result = await launchCamera(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        setSlipImageUri(file.uri || '');
-      }
     } catch (error) {
       console.error('Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');
@@ -326,8 +319,16 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
         />
       </View>
 
-      {cheques.map((cheque, index) => (
-        <View key={index} style={styles.chequeContainer}>
+      <View style={styles.chequeContainer}>
+        {cheques.map((cheque, index) => (
+          <View key={index} style={[
+            styles.chequeItem,
+            index === cheques.length - 1 && { 
+              borderBottomWidth: 0, 
+              marginBottom: 0,
+              paddingBottom: 0 
+            }
+          ]}>
           <Text style={styles.chequeTitle}>Cheque {index + 1}</Text>
           
           {/* Row 1: Cheque Number and Amount side by side */}
@@ -365,7 +366,7 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
           </View>
 
           {/* Row 2: Captured Image below cheque number */}
-          {cheque.imageUri ? (
+          {cheque.imageUri && (
             <View style={styles.imageContainer}>
               <Image source={{ uri: cheque.imageUri }} style={styles.image} />
               <View style={styles.imageActions}>
@@ -383,19 +384,10 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
-          ) : (
-            <View style={styles.noImageContainer}>
-              <Text style={styles.noImageText}>No image captured</Text>
-              <TouchableOpacity
-                style={styles.selectImageButton}
-                onPress={() => pickChequeImage(index)}
-              >
-                <Text style={styles.selectImageText}>🖼️ Select from Gallery</Text>
-              </TouchableOpacity>
-            </View>
           )}
         </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 
@@ -475,11 +467,11 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
       case 'cash':
         return '45%'; // Cash payment is simple, needs less space
       case 'cheque':
-        // Adjust height based on number of cheques
-        if (cheques.length === 1) return '65%';
-        if (cheques.length === 2) return '75%';
-        if (cheques.length === 3) return '85%';
-        return '90%'; // For 4+ cheques
+        // Adjust height based on number of cheques - increased for better visibility
+        if (cheques.length === 1) return '75%';
+        if (cheques.length === 2) return '85%';
+        if (cheques.length === 3) return '90%';
+        return '95%'; // For 4+ cheques
       case 'bank_deposit':
         return '60%'; // Bank deposit needs moderate space
       default:
@@ -540,7 +532,7 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ 
               flexGrow: 1,
-              paddingBottom: paymentType === 'cheque' && cheques.length > 2 ? 20 : 0
+              paddingBottom: paymentType === 'cheque' ? 40 : 20
             }}
           >
             {/* Payment Type Selection */}
@@ -709,6 +701,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 15,
   },
+  chequeItem: {
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
   chequeTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -840,6 +838,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
+    marginBottom: 20,
   },
   submitButtonDisabled: {
     backgroundColor: '#ccc',

@@ -20,6 +20,7 @@ import { check, PERMISSIONS } from 'react-native-permissions';
 // DocumentPicker removed due to React Native 0.81.1 compatibility issues
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import FileViewer from 'react-native-file-viewer';
 
 
 
@@ -47,6 +48,8 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
     size: number;
     id: string;
   }>>([]);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [editDescription, setEditDescription] = useState('');
 
   // Local storage key for documents
   const STORAGE_KEY = `@customer_documents_${customerId}`;
@@ -345,6 +348,31 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
     }
   };
 
+  const updateDocument = async (documentId: string, newDescription: string) => {
+    try {
+      // Get existing documents
+      const existingDocs = await loadDocumentsFromStorage();
+      
+      // Find and update the document
+      const updatedDocs = existingDocs.map(doc => 
+        doc.id === documentId 
+          ? { ...doc, description: newDescription, updatedAt: new Date().toISOString() }
+          : doc
+      );
+      
+      // Save updated documents
+      await saveDocumentsToStorage(updatedDocs);
+      
+      Alert.alert('Success', 'Document updated successfully');
+      setEditingDocument(null);
+      setEditDescription('');
+      await loadDocuments();
+    } catch (error) {
+      console.error('Error updating document:', error);
+      Alert.alert('Error', 'Failed to update document');
+    }
+  };
+
   const deleteDocument = async (documentId: string) => {
     Alert.alert(
       'Delete Document',
@@ -377,16 +405,57 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
     );
   };
 
+  const openFileViewer = async (document: Document) => {
+    try {
+      console.log('📁 Opening file:', document.fileUrl);
+      
+      // Check if file exists
+      if (!document.fileUrl) {
+        Alert.alert('Error', 'File URL not found');
+        return;
+      }
+
+      // Open file with FileViewer
+      await FileViewer.open(document.fileUrl, {
+        showOpenWithDialog: true,
+        onDismiss: () => {
+          console.log('File viewer dismissed');
+        },
+      });
+    } catch (error) {
+      console.error('Error opening file:', error);
+      Alert.alert('Error', 'Unable to open this file type or file not found');
+    }
+  };
+
   const openDocument = async (document: Document) => {
     try {
-      // Show document details
+      // Show comprehensive document details
+      const details = [
+        `📄 Name: ${document.originalName}`,
+        `📋 Type: ${document.fileType.toUpperCase()}`,
+        `📏 Size: ${formatFileSize(document.fileSize)}`,
+        `📅 Uploaded: ${formatDate(document.createdAt)}`,
+        `👤 Uploaded by: ${document.uploadedBy}`,
+        `💾 Storage: Local Storage (Demo Mode)`,
+        document.description ? `📝 Description: ${document.description}` : '',
+        `🆔 Document ID: ${document.id}`,
+      ].filter(Boolean).join('\n');
+
       Alert.alert(
-        'Document Details',
-        `Name: ${document.originalName}\nType: ${document.fileType}\nSize: ${formatFileSize(document.fileSize)}\nUploaded: ${formatDate(document.createdAt)}\n${document.description ? `Description: ${document.description}` : ''}\n\nStorage: Local Storage (Demo Mode)`,
+        '📋 Document Review',
+        details,
         [
           { text: 'Close', style: 'cancel' },
-          { text: 'View File', onPress: () => {
-            Alert.alert('Info', 'File viewing will be implemented in production mode');
+          { text: '📁 Open File', onPress: () => {
+            openFileViewer(document);
+          }},
+          { text: '✏️ Edit', onPress: () => {
+            setEditingDocument(document);
+            setEditDescription(document.description || '');
+          }},
+          { text: '🗑️ Delete', style: 'destructive', onPress: () => {
+            deleteDocument(document.id);
           }},
         ]
       );
@@ -417,6 +486,20 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
                 </TouchableOpacity>
               </View>
               
+              {/* Documents Count */}
+              <View style={styles.documentsCountContainer}>
+                <Text style={styles.documentsCountText}>
+                  {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
+                </Text>
+              </View>
+              
+              {/* Documents Review Section */}
+              <View style={styles.documentsSection}>
+                <Text style={styles.documentsSectionTitle}>
+                  📋 Review Documents ({documents.length})
+                </Text>
+              </View>
+              
               <ScrollView style={styles.documentsList}>
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
@@ -436,7 +519,8 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
                     <TouchableOpacity 
                       key={document.id} 
                       style={styles.documentItem}
-                      onPress={() => openDocument(document)}
+                      onPress={() => openFileViewer(document)}
+                      onLongPress={() => openDocument(document)}
                     >
                       <View style={styles.documentIcon}>
                         <Text style={styles.documentIconText}>
@@ -444,25 +528,35 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
                         </Text>
                       </View>
                       <View style={styles.documentInfo}>
-                        <Text style={styles.documentName}>{document.originalName}</Text>
+                        <Text style={styles.documentName} numberOfLines={1}>
+                          {document.originalName}
+                        </Text>
                         <Text style={styles.documentMeta}>
                           {document.fileType.toUpperCase()} • {formatFileSize(document.fileSize)} • {formatDate(document.createdAt)}
                         </Text>
                         {document.description && (
-                          <Text style={styles.documentDescription}>
-                            {document.description}
+                          <Text style={styles.documentDescription} numberOfLines={2}>
+                            📝 {document.description}
                           </Text>
                         )}
                         <Text style={styles.documentUploader}>
-                          Uploaded by {document.uploadedBy}
+                          👤 {document.uploadedBy} • 💾 Local Storage
                         </Text>
                       </View>
-                      <TouchableOpacity 
-                        style={styles.deleteButton}
-                        onPress={() => deleteDocument(document.id)}
-                      >
-                        <Text style={styles.deleteButtonText}>🗑️</Text>
-                      </TouchableOpacity>
+                      <View style={styles.documentActions}>
+                        <TouchableOpacity 
+                          style={styles.viewButton}
+                          onPress={() => openDocument(document)}
+                        >
+                          <Text style={styles.viewButtonText}>👁️</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.deleteButton}
+                          onPress={() => deleteDocument(document.id)}
+                        >
+                          <Text style={styles.deleteButtonText}>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
                   ))
                 )}
@@ -568,6 +662,83 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         </View>
       </TouchableWithoutFeedback>
     </Modal>
+
+    {/* Edit Document Modal */}
+    <Modal
+      visible={editingDocument !== null}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setEditingDocument(null)}
+    >
+      <TouchableWithoutFeedback onPress={() => setEditingDocument(null)}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+            <View style={styles.editModal}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>✏️ Edit Document</Text>
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={() => setEditingDocument(null)}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {editingDocument && (
+                <View style={styles.editContent}>
+                  <View style={styles.documentPreview}>
+                    <View style={styles.documentIcon}>
+                      <Text style={styles.documentIconText}>
+                        {getDocumentIcon(editingDocument.fileType)}
+                      </Text>
+                    </View>
+                    <View style={styles.documentInfo}>
+                      <Text style={styles.documentName}>{editingDocument.originalName}</Text>
+                      <Text style={styles.documentMeta}>
+                        {editingDocument.fileType.toUpperCase()} • {formatFileSize(editingDocument.fileSize)}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.editLabel}>Description:</Text>
+                  <TextInput
+                    style={styles.editDescriptionInput}
+                    placeholder="Enter document description..."
+                    value={editDescription}
+                    onChangeText={setEditDescription}
+                    multiline
+                    numberOfLines={3}
+                    placeholderTextColor="#999"
+                  />
+                  
+                  <View style={styles.editActions}>
+                    <TouchableOpacity 
+                      style={styles.cancelButton}
+                      onPress={() => {
+                        setEditingDocument(null);
+                        setEditDescription('');
+                      }}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.saveButton}
+                      onPress={() => {
+                        if (editingDocument) {
+                          updateDocument(editingDocument.id, editDescription);
+                        }
+                      }}
+                    >
+                      <Text style={styles.saveButtonText}>Save Changes</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
   );
 };
 
@@ -600,6 +771,25 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  documentsCountContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  documentsCountText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  documentsSection: {
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  documentsSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
   },
   closeButton: {
     width: 30,
@@ -688,6 +878,22 @@ const styles = StyleSheet.create({
   documentUploader: {
     fontSize: 12,
     color: '#999',
+  },
+  documentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  viewButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#4A90E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewButtonText: {
+    fontSize: 14,
   },
   deleteButton: {
     width: 32,
@@ -845,6 +1051,71 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  editModal: {
+    width: '90%',
+    maxWidth: 500,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    alignSelf: 'center',
+  },
+  editContent: {
+    paddingTop: 16,
+  },
+  documentPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+  },
+  editLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  editDescriptionInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    backgroundColor: '#F8F9FA',
+    marginBottom: 20,
+    textAlignVertical: 'top',
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#4A90E2',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
 

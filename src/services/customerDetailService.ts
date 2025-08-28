@@ -50,6 +50,24 @@ export interface CustomerDetailsResponse {
   }>;
 }
 
+export interface Document {
+  id: string;
+  customerId: string;
+  uploadedBy: string;
+  fileName: string;
+  originalName: string;
+  fileType: string;
+  fileSize: number;
+  fileUrl: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentResponse {
+  documents: Document[];
+}
+
 const STORAGE_KEY_PREFIX = '@customer_details_';
 const LAST_SYNC_KEY = '@customer_details_last_sync';
 
@@ -139,6 +157,83 @@ export const customerDetailService = {
       await AsyncStorage.removeItem(LAST_SYNC_KEY);
     } catch (error) {
       console.error('Error clearing local data:', error);
+    }
+  },
+
+  // Document-related methods
+  async getCustomerDocuments(customerId: string): Promise<DocumentResponse> {
+    try {
+      const userData = await getUserData();
+      if (!userData?.token) {
+        throw new Error('Authentication token not found. Please log out and log back in.');
+      }
+
+      const response = await api.get(getApiUrl(`/ar/documents/${customerId}`), {
+        headers: {
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error getting customer documents:', error);
+      
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      throw error;
+    }
+  },
+
+  async uploadDocument(formData: FormData): Promise<Document> {
+    try {
+      const userData = await getUserData();
+      if (!userData?.token) {
+        throw new Error('Authentication token not found. Please log out and log back in.');
+      }
+
+      const response = await api.post(getApiUrl('/ar/documents/upload'), formData, {
+        headers: {
+          'Authorization': `Bearer ${userData.token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      throw error;
+    }
+  },
+
+  async deleteDocument(documentId: string): Promise<{ message: string }> {
+    try {
+      const userData = await getUserData();
+      if (!userData?.token) {
+        throw new Error('Authentication token not found. Please log out and log back in.');
+      }
+
+      const response = await api.delete(getApiUrl(`/ar/documents/${documentId}`), {
+        headers: {
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      throw error;
     }
   }
 }; 

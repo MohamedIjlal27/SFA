@@ -22,6 +22,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { customerDetailService, CustomerDetailsResponse } from '../../services/customerDetailService';
 import { directionService } from '../../services/directionService';
+import DocumentsModal from '../../components/DocumentsModal';
+import PaymentCollectionModal from '../../components/PaymentCollectionModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CustomerDetail'>;
 
@@ -120,6 +122,8 @@ const CustomerDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [reasonRemarks, setReasonRemarks] = useState('');
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const ageBuckets = [
     { label: '0-30', value: '0-30' },
@@ -879,7 +883,10 @@ const CustomerDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                 <Text style={styles.customerActionIcon}>👤</Text>
                 <Text style={styles.customerActionText}>Profile</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.customerActionButton}>
+              <TouchableOpacity 
+                style={[styles.customerActionButton, { width: 100 }]}
+                onPress={() => setShowDocumentsModal(true)}
+              >
                 <Text style={styles.customerActionIcon}>📄</Text>
                 <Text style={styles.customerActionText}>Documents</Text>
               </TouchableOpacity>
@@ -964,7 +971,12 @@ const CustomerDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               type="sales"
               onPress={() => setShowReasonModal(true)} 
             />
-            <ActionButton title="Collect Payment" icon="💵" type="sales" />
+            <ActionButton 
+              title="Collect Payment" 
+              icon="💵" 
+              type="sales"
+              onPress={() => setShowPaymentModal(true)}
+            />
             <ActionButton title="Collect Return Goods" icon="📦" type="sales" />
             <ActionButton title="Check Inventory" icon="🔍" type="sales" />
           </View>
@@ -1531,6 +1543,28 @@ const CustomerDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
       {/* Reason Modal */}
       {renderReasonModal()}
+
+      {/* Documents Modal */}
+      <DocumentsModal
+        visible={showDocumentsModal}
+        onClose={() => setShowDocumentsModal(false)}
+        customerId={customerDetails?.result?.customerId || ''}
+        onDocumentUploaded={() => {
+          // Refresh documents if needed
+        }}
+      />
+
+      {/* Payment Collection Modal */}
+      <PaymentCollectionModal
+        visible={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        customerId={customerDetails?.result?.customerId || ''}
+        onPaymentCollected={(paymentData) => {
+          console.log('Payment collected:', paymentData);
+          // TODO: Handle payment collection success
+          // You can refresh customer details or show success message
+        }}
+      />
     </SafeAreaView>
   );
 };

@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   CUSTOMER_LIST: '@customer_list',
   CUSTOMER_LIST_SYNC_TIME: '@customer_list_sync_time',
   SYNC_SETTINGS: '@sync_settings',
+  FIRST_TIME_FLAG: '@first_time_flag',
 };
 
 const api = axios.create({
@@ -348,4 +349,23 @@ export const performManualSync = async (): Promise<{
   }
 
   return result;
+};
+
+// First-time flag functions
+export const getFirstTimeFlag = async (): Promise<boolean> => {
+  try {
+    const flag = await AsyncStorage.getItem(STORAGE_KEYS.FIRST_TIME_FLAG);
+    return flag === 'false'; // Return true if flag is not set or is 'false'
+  } catch (error) {
+    console.error('Error getting first time flag:', error);
+    return true; // Default to first time if error
+  }
+};
+
+export const setFirstTimeFlag = async (): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.FIRST_TIME_FLAG, 'false');
+  } catch (error) {
+    console.error('Error setting first time flag:', error);
+  }
 }; 

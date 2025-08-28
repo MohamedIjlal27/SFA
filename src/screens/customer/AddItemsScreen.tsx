@@ -23,7 +23,8 @@ import { orderItemsStore } from '../../services/orderItemsStore';
 import { Picker } from '@react-native-picker/picker';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import GestureRecognizer from 'react-native-swipe-gestures';
-import ProductDetailSheet from '../../components/ProductDetailSheet';
+import { useQuantityContext } from '../../context/QuantityContext';
+
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddItems'>;
 
@@ -50,8 +51,6 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
   const [allSubCategories, setAllSubCategories] = useState<string[]>([]);
   const [showSubCategoryDropdown, setShowSubCategoryDropdown] = useState(false);
   const [subCategorySearchQuery, setSubCategorySearchQuery] = useState('');
-  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
-  const [selectedProductIndex, setSelectedProductIndex] = useState(-1);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   const windowWidth = Dimensions.get('window').width;
   const [isGridView, setIsGridView] = useState(false);
@@ -74,7 +73,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
     showSelectedOnly: false,
   });
 
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const { quantities, setQuantity, getQuantity, updateQuantities } = useQuantityContext();
   
   // Filter tags state
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -143,18 +142,18 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const handleCommit = () => {
     const selectedProducts = products
-      .filter(product => quantities[product.itemCode] && quantities[product.itemCode] > 0)
+      .filter(product => getQuantity(product.itemCode) > 0)
       .map(product => ({
         id: product.itemCode,
         itemCode: product.itemCode,
         description: product.description,
         uom: product.uom,
         unitPrice: product.price,
-        quantity: quantities[product.itemCode] || 0,
+        quantity: getQuantity(product.itemCode),
         discount: product.discountAmount || 0,
         discountPercentage: product.discountPercentage || 0,
-        total: (product.price * (quantities[product.itemCode] || 0)) - 
-               ((product.discountAmount || 0) * (quantities[product.itemCode] || 0))
+        total: (product.price * getQuantity(product.itemCode)) - 
+               ((product.discountAmount || 0) * getQuantity(product.itemCode))
       }));
 
     if (selectedProducts.length === 0) {
@@ -191,10 +190,10 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
           filteredProducts.forEach(product => {
             newQuantities[product.itemCode] = 1;
           });
-          setQuantities(newQuantities);
+          updateQuantities(newQuantities);
         } else {
           // Deselect all products
-          setQuantities({});
+          updateQuantities({});
         }
       }
       
@@ -204,24 +203,17 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const handleQuantityChange = (productId: string, value: string) => {
     const quantity = parseInt(value) || 0;
-    setQuantities(prev => ({
-      ...prev,
-      [productId]: quantity
-    }));
+    setQuantity(productId, quantity);
   };
 
   const handleIncrement = (productId: string) => {
-    setQuantities(prev => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1
-    }));
+    const currentQuantity = getQuantity(productId);
+    setQuantity(productId, currentQuantity + 1);
   };
 
   const handleDecrement = (productId: string) => {
-    setQuantities(prev => ({
-      ...prev,
-      [productId]: Math.max(0, (prev[productId] || 0) - 1)
-    }));
+    const currentQuantity = getQuantity(productId);
+    setQuantity(productId, Math.max(0, currentQuantity - 1));
   };
 
   const handleTagPress = (tag: string) => {
@@ -271,10 +263,10 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
           filteredProducts.forEach(product => {
             newQuantities[product.itemCode] = 1;
           });
-          setQuantities(newQuantities);
+          updateQuantities(newQuantities);
         } else {
           // Deselect all products
-          setQuantities({});
+          updateQuantities({});
         }
       }
       
@@ -365,7 +357,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
     // Filter by options
     const matchesOptions = 
       (!options.showZeroQuantity ? product.qty > 0 : true) &&
-      (!options.showSelectedOnly || quantities[product.itemCode] > 0);
+      (!options.showSelectedOnly || getQuantity(product.itemCode) > 0);
     
     const matchesQtyFilter = !qtyFilter || (
       qtyFilter.criterion === '>=' ? product.qty >= qtyFilter.value :
@@ -384,45 +376,20 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const handleProductPress = (index: number) => {
-    setSelectedProductIndex(index);
-    setIsDetailModalVisible(true);
+    const product = filteredProducts[index];
+    navigation.navigate('ProductDetails', { 
+      productId: product.itemCode,
+      product: product // Pass the product data directly
+    });
   };
 
-  const handleCloseDetail = () => {
-    setIsDetailModalVisible(false);
-    setSelectedProductIndex(-1);
-    setIsImageZoomed(false);
-  };
 
-  const handleSwipeLeft = () => {
-    if (selectedProductIndex < filteredProducts.length - 1) {
-      setSelectedProductIndex(prev => prev + 1);
-    }
-  };
-
-  const handleSwipeRight = () => {
-    if (selectedProductIndex > 0) {
-      setSelectedProductIndex(prev => prev - 1);
-    }
-  };
 
   const toggleViewMode = () => {
     setIsGridView(prev => !prev);
   };
 
-  const renderDetailModal = () => {
-    if (selectedProductIndex === -1) return null;
 
-    return (
-      <ProductDetailSheet
-        products={filteredProducts}
-        currentIndex={selectedProductIndex}
-        isVisible={isDetailModalVisible}
-        onClose={handleCloseDetail}
-        onIndexChange={setSelectedProductIndex}
-      />
-    );
-  };
 
   const renderProductCard = ({ item: product, index }: { item: Product; index: number }) => (
     <TouchableOpacity
@@ -493,7 +460,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
             <View style={styles.productGridQuantity}>
               <View style={styles.gridQuantityContainer}>
                 <TouchableOpacity 
-                  style={[styles.quantityButton, quantities[product.itemCode] === 0 && styles.quantityButtonDisabled]}
+                  style={[styles.quantityButton, getQuantity(product.itemCode) === 0 && styles.quantityButtonDisabled]}
                   onPress={(e) => {
                     e.stopPropagation();
                     handleDecrement(product.itemCode);
@@ -501,15 +468,15 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
                 >
                   <Text style={[
                     styles.quantityButtonText,
-                    quantities[product.itemCode] === 0 && styles.quantityButtonTextDisabled
+                    getQuantity(product.itemCode) === 0 && styles.quantityButtonTextDisabled
                   ]}>−</Text>
                 </TouchableOpacity>
                 <TextInput
                   style={[
                     styles.quantityInput,
-                    quantities[product.itemCode] >= product.qty && styles.quantityInputMax
+                    getQuantity(product.itemCode) >= product.qty && styles.quantityInputMax
                   ]}
-                  value={String(quantities[product.itemCode] || 0)}
+                  value={String(getQuantity(product.itemCode))}
                   onChangeText={(value) => handleQuantityChange(product.itemCode, value)}
                   keyboardType="numeric"
                   onPressIn={(e) => e.stopPropagation()}
@@ -517,7 +484,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
                 <TouchableOpacity 
                   style={[
                     styles.quantityButton,
-                    quantities[product.itemCode] >= product.qty && styles.quantityButtonDisabled
+                    getQuantity(product.itemCode) >= product.qty && styles.quantityButtonDisabled
                   ]}
                   onPress={(e) => {
                     e.stopPropagation();
@@ -526,7 +493,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
                 >
                   <Text style={[
                     styles.quantityButtonText,
-                    quantities[product.itemCode] >= product.qty && styles.quantityButtonTextDisabled
+                    getQuantity(product.itemCode) >= product.qty && styles.quantityButtonTextDisabled
                   ]}>+</Text>
                 </TouchableOpacity>
               </View>
@@ -583,7 +550,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
           <View style={styles.quantityColumn}>
             <View style={styles.quantityContainer}>
               <TouchableOpacity 
-                style={[styles.quantityButton, quantities[product.itemCode] === 0 && styles.quantityButtonDisabled]}
+                style={[styles.quantityButton, getQuantity(product.itemCode) === 0 && styles.quantityButtonDisabled]}
                 onPress={(e) => {
                   e.stopPropagation();
                   handleDecrement(product.itemCode);
@@ -591,7 +558,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
               >
                 <Text style={[
                   styles.quantityButtonText,
-                  quantities[product.itemCode] === 0 && styles.quantityButtonTextDisabled
+                  getQuantity(product.itemCode) === 0 && styles.quantityButtonTextDisabled
                 ]}>−</Text>
               </TouchableOpacity>
               <TextInput
@@ -607,7 +574,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
               <TouchableOpacity 
                 style={[
                   styles.quantityButton,
-                  quantities[product.itemCode] >= product.qty && styles.quantityButtonDisabled
+                  getQuantity(product.itemCode) >= product.qty && styles.quantityButtonDisabled
                 ]}
                 onPress={(e) => {
                   e.stopPropagation();
@@ -616,7 +583,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
               >
                 <Text style={[
                   styles.quantityButtonText,
-                  quantities[product.itemCode] >= product.qty && styles.quantityButtonTextDisabled
+                  getQuantity(product.itemCode) >= product.qty && styles.quantityButtonTextDisabled
                 ]}>+</Text>
               </TouchableOpacity>
             </View>
@@ -717,7 +684,7 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   };
 
-  const modal = renderDetailModal();
+
   
   // Initialize styles
   const styles = createStyles({});
@@ -971,7 +938,6 @@ const AddItemsScreen: React.FC<Props> = ({ route, navigation }) => {
           />
         )}
       </SafeAreaView>
-      {modal}
       {renderQtyFilterModal()}
 
       {/* SubCategory Dropdown Modal */}

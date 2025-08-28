@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator, AppState, AppStateStatus } from 'react-native';
+import PermissionRequestScreen from '../screens/auth/screens/PermissionRequestScreen';
 import LoginScreen from '../screens/auth/screens/LoginScreen';
 import DashboardTabNavigator from './DashboardTabNavigator';
 import JourneyScreen from '../screens/journey/JourneyScreen';
@@ -9,11 +10,14 @@ import CustomerDetailScreen from '../screens/customer/CustomerDetailScreen';
 import MultiCustomerDueListScreen from '../screens/dueList/MultiCustomerDueListScreen';
 import CreateOrderScreen from '../screens/customer/CreateOrderScreen';
 import AddItemsScreen from '../screens/customer/AddItemsScreen';
+import ProductDetailsScreen from '../screens/product/ProductDetailsScreen';
 import OrderDetailScreen from '../screens/orders/OrderDetailScreen';
 import { CustomerDetails } from '../data/mockCustomerDetails';
-import { getUserData } from '../services/storage';
+import { getUserData, getFirstTimeFlag, setFirstTimeFlag } from '../services/storage';
+import { QuantityProvider } from '../context/QuantityContext';
 
 export type RootStackParamList = {
+  PermissionRequest: undefined;
   Login: undefined;
   Dashboard: undefined;
   Journey: undefined;
@@ -41,6 +45,10 @@ export type RootStackParamList = {
     orderId: string;
     customerName: string;
   };
+  ProductDetails: {
+    productId: string;
+    product?: any; // Pass the product data directly to avoid loading again
+  };
   OrderDetail: {
     orderId: string;
   };
@@ -51,6 +59,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const AppNavigator = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isFirstTime, setIsFirstTime] = useState(false);
 
   useEffect(() => {
     checkAuthState();
@@ -65,6 +74,10 @@ const AppNavigator = () => {
 
   const checkAuthState = async () => {
     try {
+      // Check if this is the first time opening the app
+      const firstTimeFlag = await getFirstTimeFlag();
+      setIsFirstTime(!firstTimeFlag);
+
       const userData = await getUserData();
       const authenticated = !!userData;
       console.log('Auth state check:', authenticated ? 'User is authenticated' : 'User is not authenticated');
@@ -72,6 +85,7 @@ const AppNavigator = () => {
     } catch (error) {
       console.error('Error checking auth state:', error);
       setIsAuthenticated(false);
+      setIsFirstTime(true); // Default to first time if error
     } finally {
       setIsLoading(false);
     }
@@ -94,24 +108,34 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName={isAuthenticated ? "Dashboard" : "Login"}
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: 'transparent' },
-        }}
-      >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardTabNavigator} />
-        <Stack.Screen name="Journey" component={JourneyScreen} />
-        <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
-        <Stack.Screen name="MultiCustomerDueList" component={MultiCustomerDueListScreen} />
-        <Stack.Screen name="CreateOrder" component={CreateOrderScreen} />
-        <Stack.Screen name="AddItems" component={AddItemsScreen} />
-        <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <QuantityProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName={
+            isAuthenticated 
+              ? "Dashboard" 
+              : isFirstTime 
+                ? "PermissionRequest" 
+                : "Login"
+          }
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        >
+          <Stack.Screen name="PermissionRequest" component={PermissionRequestScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Dashboard" component={DashboardTabNavigator} />
+          <Stack.Screen name="Journey" component={JourneyScreen} />
+          <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
+          <Stack.Screen name="MultiCustomerDueList" component={MultiCustomerDueListScreen} />
+          <Stack.Screen name="CreateOrder" component={CreateOrderScreen} />
+          <Stack.Screen name="AddItems" component={AddItemsScreen} />
+          <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
+          <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </QuantityProvider>
   );
 };
 

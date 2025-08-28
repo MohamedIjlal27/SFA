@@ -9,4 +9,5 @@ export { default as ErrorState } from './ErrorState';
 export { default as DashboardStats } from './DashboardStats';
 export { default as DashboardTasks } from './DashboardTasks';
 export { default as DashboardDialogs } from './DashboardDialogs';
-export { SecureView } from './SecureView'; 
+export { SecureView } from './SecureView';
+export { default as FeedbackModal } from './FeedbackModal'; 

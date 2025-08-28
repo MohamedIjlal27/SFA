@@ -12,6 +12,8 @@ import ImageViewer from 'react-native-image-zoom-viewer';
 import { Product } from '../services/productService';
 import LinearGradient from 'react-native-linear-gradient';
 import { Card, IconButton, Button, Text, useTheme, Portal } from 'react-native-paper';
+import FeedbackModal, { FeedbackData } from './FeedbackModal';
+import { feedbackService } from '../services/feedbackService';
 
 interface Props {
   products: Product[];
@@ -29,6 +31,7 @@ const ProductDetailSheet: React.FC<Props> = ({
   onIndexChange,
 }) => {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const currentProduct = products[currentIndex];
   const theme = useTheme();
 
@@ -44,6 +47,27 @@ const ProductDetailSheet: React.FC<Props> = ({
     }
   };
 
+  const handleFeedbackSubmit = async (feedbackData: FeedbackData) => {
+    try {
+      const response = await feedbackService.submitFeedback(
+        currentProduct.itemCode,
+        currentProduct.description,
+        feedbackData
+      );
+
+      if (response.success) {
+        console.log('Feedback submitted successfully');
+        return Promise.resolve();
+      } else {
+        console.error('Failed to submit feedback:', response.error);
+        return Promise.reject(new Error(response.error || 'Failed to submit feedback'));
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      return Promise.reject(error);
+    }
+  };
+
   const formatCurrency = (amount: number): string => {
     return amount.toLocaleString('en-US', {
       minimumFractionDigits: 2,
@@ -54,6 +78,9 @@ const ProductDetailSheet: React.FC<Props> = ({
   if (!isVisible || !currentProduct) {
     return null;
   }
+
+  // Check if product has a valid image URL
+  const hasValidImage = currentProduct.imageUrl && currentProduct.imageUrl.trim() !== '';
 
   return (
     <Portal>
@@ -97,23 +124,28 @@ const ProductDetailSheet: React.FC<Props> = ({
                 <View style={styles.imageContainer}>
                   <Button
                     mode="text"
-                    onPress={() => setImageViewerVisible(true)}
+                    onPress={() => hasValidImage && setImageViewerVisible(true)}
                     style={{ padding: 0 }}
                     contentStyle={{ padding: 0 }}
+                    disabled={!hasValidImage}
                   >
                     <Image
-                      source={{ uri: currentProduct.imageUrl }}
+                      source={{ 
+                        uri: hasValidImage ? currentProduct.imageUrl : 'https://via.placeholder.com/300x300?text=No+Image'
+                      }}
                       style={styles.image}
                       resizeMode="contain"
                     />
                   </Button>
-                  <IconButton
-                    icon="magnify"
-                    size={18}
-                    style={styles.zoomIcon}
-                    iconColor={theme.colors.primary}
-                    onPress={() => setImageViewerVisible(true)}
-                  />
+                  {hasValidImage && (
+                    <IconButton
+                      icon="magnify"
+                      size={18}
+                      style={styles.zoomIcon}
+                      iconColor={theme.colors.primary}
+                      onPress={() => setImageViewerVisible(true)}
+                    />
+                  )}
                 </View>
                 <IconButton
                   icon="chevron-right"
@@ -177,9 +209,9 @@ const ProductDetailSheet: React.FC<Props> = ({
                   mode="contained"
                   style={styles.feedbackButton}
                   labelStyle={styles.feedbackButtonText}
-                  onPress={() => {}}
+                  onPress={() => setFeedbackModalVisible(true)}
                 >
-                  Feedbacks
+                  Feedback
                 </Button>
                 <Button
                   mode="outlined"
@@ -196,12 +228,23 @@ const ProductDetailSheet: React.FC<Props> = ({
       </Modal>
       <Modal visible={imageViewerVisible} transparent={true}>
         <ImageViewer
-          imageUrls={[{ url: currentProduct?.imageUrl || '' }]}
+          imageUrls={hasValidImage ? [{ url: currentProduct.imageUrl! }] : []}
           enableSwipeDown
           onSwipeDown={() => setImageViewerVisible(false)}
           onClick={() => setImageViewerVisible(false)}
+          index={0}
+          saveToLocalByLongPress={false}
         />
       </Modal>
+      
+      {/* Feedback Modal */}
+      <FeedbackModal
+        visible={feedbackModalVisible}
+        onClose={() => setFeedbackModalVisible(false)}
+        onSubmit={handleFeedbackSubmit}
+        productName={currentProduct?.description}
+        productCode={currentProduct?.itemCode}
+      />
     </Portal>
   );
 };

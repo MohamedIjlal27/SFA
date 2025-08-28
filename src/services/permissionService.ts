@@ -105,9 +105,9 @@ class PermissionService {
             {
               title: 'Storage Permission',
               message: 'This app needs access to your storage to select and save documents.',
-              buttonNeutral: 'Ask Me Later',
-              buttonNegative: 'Cancel',
-              buttonPositive: 'OK',
+        buttonNeutral: 'Ask Me Later',
+        buttonNegative: 'Cancel',
+        buttonPositive: 'OK',
             },
           );
 

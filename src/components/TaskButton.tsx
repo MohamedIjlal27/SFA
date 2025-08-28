@@ -8,20 +8,22 @@ import { createTaskButtonStyles } from '../utils/styles/TaskButton.styles';
 interface TaskButtonProps {
   title: string;
   onPress?: () => void;
+  disabled?: boolean;
 }
 
-const TaskButton: React.FC<TaskButtonProps> = ({ title, onPress }) => {
+const TaskButton: React.FC<TaskButtonProps> = ({ title, onPress, disabled = false }) => {
   const theme = useTheme();
   const styles = createTaskButtonStyles();
   
   const getIcon = (title: string) => {
+    const iconColor = disabled ? "#888888" : "#ffffff";
     switch (title.toLowerCase()) {
       case 'start journey':
-        return <MapPin size={24} color="#ffffff" />;
+        return <MapPin size={24} color={iconColor} />;
       case 'new lead':
-        return <UserPlus size={24} color="#ffffff" />;
+        return <UserPlus size={24} color={iconColor} />;
       case 'view due list':
-        return <List size={24} color="#ffffff" />;
+        return <List size={24} color={iconColor} />;
       default:
         return null;
     }
@@ -30,18 +32,19 @@ const TaskButton: React.FC<TaskButtonProps> = ({ title, onPress }) => {
   return (
     <View style={styles.taskButton}>
       <LinearGradient
-        colors={[theme.colors.primary, theme.colors.secondary]}
+        colors={disabled ? ['#cccccc', '#aaaaaa'] : [theme.colors.primary, theme.colors.secondary]}
         style={styles.taskButtonGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
         <TouchableOpacity
-          onPress={onPress}
+          onPress={disabled ? undefined : onPress}
           style={styles.touchableButton}
-          activeOpacity={0.8}
+          activeOpacity={disabled ? 1 : 0.8}
+          disabled={disabled}
         >
           {getIcon(title)}
-          <Text style={styles.buttonText}>{title}</Text>
+          <Text style={[styles.buttonText, disabled && { color: '#888888' }]}>{title}</Text>
         </TouchableOpacity>
       </LinearGradient>
     </View>

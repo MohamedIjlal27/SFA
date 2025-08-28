@@ -57,8 +57,12 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   // Local storage functions
   const saveDocumentsToStorage = async (docs: Document[]) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+      const storageKey = STORAGE_KEY;
+      const dataToSave = JSON.stringify(docs);
+      await AsyncStorage.setItem(storageKey, dataToSave);
       console.log('💾 Documents saved to local storage:', docs.length);
+      console.log('💾 Storage key:', storageKey);
+      console.log('💾 Data saved:', dataToSave.substring(0, 200) + '...');
     } catch (error) {
       console.error('Error saving documents to storage:', error);
     }
@@ -66,7 +70,10 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
   const loadDocumentsFromStorage = async (): Promise<Document[]> => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const storageKey = STORAGE_KEY;
+      console.log('📂 Loading from storage key:', storageKey);
+      const stored = await AsyncStorage.getItem(storageKey);
+      console.log('📂 Raw stored data:', stored ? stored.substring(0, 200) + '...' : 'null');
       if (stored) {
         const docs = JSON.parse(stored);
         console.log('📂 Loaded documents from storage:', docs.length);
@@ -89,8 +96,17 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
     setIsLoading(true);
     try {
       const docs = await loadDocumentsFromStorage();
-      setDocuments(docs);
       console.log('📚 Loaded documents:', docs.length);
+      console.log('📚 Documents data:', JSON.stringify(docs, null, 2));
+      console.log('📚 Documents array type:', Array.isArray(docs));
+      console.log('📚 First document:', docs[0]);
+      
+      setDocuments(docs);
+      
+      // Force a re-render check
+      setTimeout(() => {
+        console.log('📚 State after setDocuments:', documents.length);
+      }, 100);
     } catch (error) {
       console.error('Error loading documents:', error);
       Alert.alert('Error', 'Failed to load documents from local storage');
@@ -324,7 +340,9 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
       // Get existing documents and add new ones
       const existingDocs = await loadDocumentsFromStorage();
+      console.log('📂 Existing documents:', existingDocs.length);
       const updatedDocs = [...existingDocs, ...newDocuments];
+      console.log('📂 Updated documents total:', updatedDocs.length);
       
       // Save to local storage
       await saveDocumentsToStorage(updatedDocs);
@@ -465,7 +483,7 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
     }
   };
 
-  return (
+    return (
     <>
       <Modal
         visible={visible}
@@ -479,12 +497,50 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
               <View style={styles.documentsModal}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Customer Documents</Text>
-                  <TouchableOpacity 
-                    style={styles.closeButton}
-                    onPress={onClose}
-                  >
-                    <Text style={styles.closeButtonText}>✕</Text>
-                  </TouchableOpacity>
+                  <View style={styles.headerActions}>
+                    <TouchableOpacity 
+                      style={styles.debugButton}
+                      onPress={async () => {
+                        console.log('🔍 Debug: Current documents state:', documents.length);
+                        console.log('🔍 Debug: Storage key:', STORAGE_KEY);
+                        console.log('🔍 Debug: Customer ID:', customerId);
+                        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+                        console.log('🔍 Debug: Raw storage data:', stored);
+                        
+                        // Create test documents if none exist
+                        if (!stored || stored === '[]') {
+                          console.log('🔍 Creating test documents...');
+                          const testDocs: Document[] = [
+                            {
+                              id: 'test_1',
+                              customerId: customerId,
+                              uploadedBy: 'Test User',
+                              fileName: 'test_document.pdf',
+                              originalName: 'test_document.pdf',
+                              fileType: 'application/pdf',
+                              fileSize: 1024,
+                              fileUrl: 'file://test.pdf',
+                              description: 'Test document for debugging',
+                              createdAt: new Date().toISOString(),
+                              updatedAt: new Date().toISOString(),
+                            }
+                          ];
+                          await saveDocumentsToStorage(testDocs);
+                          await loadDocuments();
+                        } else {
+                          await loadDocuments();
+                        }
+                      }}
+                    >
+                      <Text style={styles.debugButtonText}>🔍</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.closeButton}
+                      onPress={onClose}
+                    >
+                      <Text style={styles.closeButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 
                 {/* Documents Count */}
@@ -514,52 +570,56 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
                       <Text style={styles.noDocumentsSubtext}>
                         Upload documents related to this customer
                       </Text>
+                      <Text style={styles.debugText}>Debug: documents.length = {documents.length}</Text>
                     </View>
                   ) : (
-                    documents.map((document) => (
-                      <TouchableOpacity 
-                        key={document.id} 
-                        style={styles.documentItem}
-                        onPress={() => openFileViewer(document)}
-                        onLongPress={() => openDocument(document)}
-                      >
-                        <View style={styles.documentIcon}>
-                          <Text style={styles.documentIconText}>
-                            {getDocumentIcon(document.fileType)}
-                          </Text>
-                        </View>
-                        <View style={styles.documentInfo}>
-                          <Text style={styles.documentName} numberOfLines={1}>
-                            {document.originalName}
-                          </Text>
-                          <Text style={styles.documentMeta}>
-                            {document.fileType.toUpperCase()} • {formatFileSize(document.fileSize)} • {formatDate(document.createdAt)}
-                          </Text>
-                          {document.description && (
-                            <Text style={styles.documentDescription} numberOfLines={2}>
-                              📝 {document.description}
+                    <>
+                      <Text style={styles.debugText}>Debug: Rendering {documents.length} documents</Text>
+                      {documents.map((document, index) => (
+                        <TouchableOpacity 
+                          key={document.id} 
+                          style={styles.documentItem}
+                          onPress={() => openFileViewer(document)}
+                          onLongPress={() => openDocument(document)}
+                        >
+                          <View style={styles.documentIcon}>
+                            <Text style={styles.documentIconText}>
+                              {getDocumentIcon(document.fileType)}
                             </Text>
-                          )}
-                          <Text style={styles.documentUploader}>
-                            👤 {document.uploadedBy} • 💾 Local Storage
-                          </Text>
-                        </View>
-                        <View style={styles.documentActions}>
-                          <TouchableOpacity 
-                            style={styles.viewButton}
-                            onPress={() => openDocument(document)}
-                          >
-                            <Text style={styles.viewButtonText}>👁️</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity 
-                            style={styles.deleteButton}
-                            onPress={() => deleteDocument(document.id)}
-                          >
-                            <Text style={styles.deleteButtonText}>🗑️</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </TouchableOpacity>
-                    ))
+                          </View>
+                          <View style={styles.documentInfo}>
+                            <Text style={styles.documentName} numberOfLines={1}>
+                              {document.originalName}
+                            </Text>
+                            <Text style={styles.documentMeta}>
+                              {document.fileType.toUpperCase()} • {formatFileSize(document.fileSize)} • {formatDate(document.createdAt)}
+                            </Text>
+                            {document.description && (
+                              <Text style={styles.documentDescription} numberOfLines={2}>
+                                📝 {document.description}
+                              </Text>
+                            )}
+                            <Text style={styles.documentUploader}>
+                              👤 {document.uploadedBy} • 💾 Local Storage
+                            </Text>
+                          </View>
+                          <View style={styles.documentActions}>
+                            <TouchableOpacity 
+                              style={styles.viewButton}
+                              onPress={() => openDocument(document)}
+                            >
+                              <Text style={styles.viewButtonText}>👁️</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.deleteButton}
+                              onPress={() => deleteDocument(document.id)}
+                            >
+                              <Text style={styles.deleteButtonText}>🗑️</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </>
                   )}
                 </ScrollView>
                 
@@ -773,6 +833,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  debugButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFD700',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  debugButtonText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: 8,
   },
   documentsCountContainer: {
     marginBottom: 16,

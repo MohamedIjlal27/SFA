@@ -1,0 +1,12 @@
+export { default as DashboardHeader } from './DashboardHeader';
+export { default as ProfileCard } from './ProfileCard';
+export { default as SessionCard } from './SessionCard';
+export { default as AchievementCard } from './AchievementCard';
+export { default as TaskButton } from './TaskButton';
+export { default as ConfirmationModal } from './ConfirmationModal';
+export { default as MonthYearPickerModal } from './MonthYearPickerModal';
+export { default as ErrorState } from './ErrorState';
+export { default as DashboardStats } from './DashboardStats';
+export { default as DashboardTasks } from './DashboardTasks';
+export { default as DashboardDialogs } from './DashboardDialogs';
+export { SecureView } from './SecureView'; 

@@ -265,6 +265,11 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       return;
     }
 
+    if (!customerId || customerId.trim() === '') {
+      Alert.alert('Error', 'Customer ID is required');
+      return;
+    }
+
     setIsUploading(true);
     try {
       console.log('Uploading files:', selectedFiles.map(f => ({
@@ -306,12 +311,32 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       console.log('File objects:', processedFileObjects);
       console.log('Customer ID:', customerId);
       console.log('Description:', description.trim());
+      console.log('FormData keys:', ['file', 'customerId', 'description']);
+      console.log('Total files to upload:', processedFileObjects.length);
       
       const response = await customerDetailService.uploadDocument(formData);
       console.log('Upload response:', response);
       
-      const uploadedCount = Array.isArray(response) ? response.length : 1;
-      Alert.alert('Success', `${uploadedCount} document${uploadedCount > 1 ? 's' : ''} uploaded successfully!`);
+      // Handle both single document and array of documents
+      let uploadedCount = 1;
+      let uploadedDocuments: Document[] = [];
+      
+      if (Array.isArray(response)) {
+        uploadedCount = response.length;
+        uploadedDocuments = response;
+      } else if (response && typeof response === 'object') {
+        uploadedDocuments = [response as Document];
+      } else {
+        console.warn('Unexpected response format:', response);
+      }
+      
+      console.log(`✅ Successfully uploaded ${uploadedCount} document(s):`, uploadedDocuments);
+      
+      Alert.alert(
+        'Upload Successful', 
+        `${uploadedCount} document${uploadedCount > 1 ? 's' : ''} uploaded successfully!`
+      );
+      
       setDescription('');
       setSelectedFiles([]); // Clear the selected files
       await loadDocuments();
@@ -335,7 +360,16 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         } else if (error.code === 'ECONNABORTED') {
           errorMessage = 'Request timeout: Please try again';
         } else if (error.response?.status === 400) {
-          errorMessage = 'Invalid file format or missing required fields';
+          // Handle validation errors from the backend
+          if (error.response.data?.message) {
+            if (Array.isArray(error.response.data.message)) {
+              errorMessage = `Validation errors: ${error.response.data.message.join(', ')}`;
+            } else {
+              errorMessage = error.response.data.message;
+            }
+          } else {
+            errorMessage = 'Invalid file format or missing required fields';
+          }
         } else if (error.response?.status === 413) {
           errorMessage = 'File too large. Maximum size is 10MB';
         } else if (error.response?.status === 401) {

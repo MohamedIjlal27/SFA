@@ -115,6 +115,16 @@ const PermissionRequestScreen: React.FC<Props> = ({ navigation }) => {
                 </Text>
               </View>
             </View>
+
+            <View style={styles.permissionItem}>
+              <Text style={styles.iconText}>📂</Text>
+              <View style={styles.permissionContent}>
+                <Text style={styles.permissionTitle}>File Manager Access</Text>
+                <Text style={styles.permissionDescription}>
+                  Access device files and folders for document uploads
+                </Text>
+              </View>
+            </View>
           </View>
 
           <View style={styles.buttonContainer}>

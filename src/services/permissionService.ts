@@ -4,6 +4,7 @@ import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 export interface PermissionStatus {
   camera: boolean;
   storage: boolean;
+  fileManager: boolean;
   allGranted: boolean;
 }
 
@@ -12,6 +13,7 @@ class PermissionService {
   private permissionStatus: PermissionStatus = {
     camera: false,
     storage: false,
+    fileManager: false,
     allGranted: false,
   };
 
@@ -28,11 +30,13 @@ class PermissionService {
     if (Platform.OS === 'android') {
       const cameraPermission = await this.requestCameraPermission();
       const storagePermission = await this.requestStoragePermission();
+      const fileManagerPermission = await this.requestFileManagerPermission();
 
       this.permissionStatus = {
         camera: cameraPermission,
         storage: storagePermission,
-        allGranted: cameraPermission && storagePermission,
+        fileManager: fileManagerPermission,
+        allGranted: cameraPermission && storagePermission && fileManagerPermission,
       };
 
       // Show a single alert if any permissions were denied
@@ -50,6 +54,7 @@ class PermissionService {
       this.permissionStatus = {
         camera: true,
         storage: true,
+        fileManager: true,
         allGranted: true,
       };
     }
@@ -124,6 +129,31 @@ class PermissionService {
         }
       } catch (err) {
         console.warn('Storage permission request failed:', err);
+        return false;
+      }
+    }
+    return true; // iOS handles this differently
+  }
+
+  public async requestFileManagerPermission(): Promise<boolean> {
+    if (Platform.OS === 'android') {
+      try {
+        // File manager access is typically included in storage permissions
+        // For Android 13+, we need to request additional permissions for file access
+        if (Platform.Version >= 33) {
+          // Request MANAGE_EXTERNAL_STORAGE for full file access (requires special permission)
+          // Note: This is a special permission that requires user to go to settings
+          const storagePermission = await this.requestStoragePermission();
+          
+          // For file manager access, we might need to check if we can access all files
+          // This is a complex permission that might require user to enable "Allow management of all files"
+          return storagePermission;
+        } else {
+          // For older Android versions, storage permission includes file manager access
+          return await this.requestStoragePermission();
+        }
+      } catch (err) {
+        console.warn('File manager permission request failed:', err);
         return false;
       }
     }

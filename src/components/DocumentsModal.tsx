@@ -18,6 +18,7 @@ import { customerDetailService, Document } from '../services/customerDetailServi
 import PermissionService from '../services/permissionService';
 import { check, PERMISSIONS } from 'react-native-permissions';
 import DocumentPicker from 'react-native-document-picker';
+import axios from 'axios';
 
 
 
@@ -38,6 +39,12 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [description, setDescription] = useState('');
+  const [selectedFile, setSelectedFile] = useState<{
+    uri: string;
+    type: string;
+    name: string;
+    size: number;
+  } | null>(null);
 
   useEffect(() => {
     if (visible && customerId) {
@@ -104,8 +111,8 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       const result = await launchCamera(options);
       if (result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        await uploadDocument({
-          uri: file.uri,
+        setSelectedFile({
+          uri: file.uri || '',
           type: file.type || 'image/jpeg',
           name: file.fileName || `photo_${Date.now()}.jpg`,
           size: file.fileSize || 0,
@@ -139,8 +146,8 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       const result = await launchImageLibrary(options);
       if (result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        await uploadDocument({
-          uri: file.uri,
+        setSelectedFile({
+          uri: file.uri || '',
           type: file.type || 'image/jpeg',
           name: file.fileName || `image_${Date.now()}.jpg`,
           size: file.fileSize || 0,
@@ -202,8 +209,8 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
           }
         }
         
-        await uploadDocument({
-          uri: file.uri,
+        setSelectedFile({
+          uri: file.uri || '',
           type: fileType,
           name: fileName,
           size: file.size || 0,
@@ -253,26 +260,67 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   const uploadDocument = async (file: any) => {
     setIsUploading(true);
     try {
+      console.log('Uploading file:', {
+        uri: file.uri,
+        type: file.type,
+        name: file.name,
+        size: file.size
+      });
+
       // Create form data
       const formData = new FormData();
-      formData.append('file', {
+      
+      // Ensure proper file object structure
+      const fileObject = {
         uri: file.uri,
         type: file.type || 'application/octet-stream',
         name: file.name,
-      } as any);
+      };
+      
+      // Convert file URI to proper format for Android
+      let fileUri = file.uri;
+      if (Platform.OS === 'android' && fileUri.startsWith('file://')) {
+        fileUri = fileUri.replace('file://', '');
+      }
+      
+      fileObject.uri = fileUri;
+      
+      formData.append('file', fileObject as any);
       formData.append('customerId', customerId);
+      
       if (description.trim()) {
         formData.append('description', description.trim());
       }
 
+      console.log('FormData created, calling uploadDocument service...');
       const response = await customerDetailService.uploadDocument(formData);
+      console.log('Upload response:', response);
+      
       Alert.alert('Success', `Document "${file.name}" uploaded successfully!`);
       setDescription('');
       await loadDocuments();
       onDocumentUploaded?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading document:', error);
-      Alert.alert('Error', 'Failed to upload document');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to upload document';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 400) {
+          errorMessage = 'Invalid file format or missing required fields';
+        } else if (error.response?.status === 413) {
+          errorMessage = 'File too large. Maximum size is 10MB';
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Authentication failed. Please log in again';
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsUploading(false);
     }

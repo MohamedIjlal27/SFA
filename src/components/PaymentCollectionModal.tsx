@@ -330,58 +330,70 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
         <View key={index} style={styles.chequeContainer}>
           <Text style={styles.chequeTitle}>Cheque {index + 1}</Text>
           
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Cheque Number</Text>
-            <TextInput
-              style={styles.input}
-              value={cheque.chequeNumber}
-              onChangeText={(value) => updateChequeField(index, 'chequeNumber', value)}
-              placeholder="Enter cheque number"
-              placeholderTextColor="#666"
-            />
-          </View>
+          {/* Row 1: Cheque Number and Amount side by side */}
+          <View style={styles.chequeRow}>
+            <View style={styles.chequeNumberContainer}>
+              <Text style={styles.label}>Cheque Number</Text>
+              <TextInput
+                style={styles.input}
+                value={cheque.chequeNumber}
+                onChangeText={(value) => updateChequeField(index, 'chequeNumber', value)}
+                placeholder="Enter cheque number"
+                placeholderTextColor="#666"
+              />
+            </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Amount (₹)</Text>
-            <TextInput
-              style={styles.input}
-              value={cheque.amount}
-              onChangeText={(value) => updateChequeField(index, 'amount', value)}
-              placeholder="Enter amount"
-              keyboardType="numeric"
-              placeholderTextColor="#666"
-            />
-          </View>
-
-          <View style={styles.imageSection}>
-            <Text style={styles.label}>Cheque Photo</Text>
-            {cheque.imageUri ? (
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: cheque.imageUri }} style={styles.image} />
+            <View style={styles.chequeAmountContainer}>
+              <Text style={styles.label}>Amount (₹)</Text>
+              <View style={styles.amountWithCamera}>
+                <TextInput
+                  style={styles.amountInput}
+                  value={cheque.amount}
+                  onChangeText={(value) => updateChequeField(index, 'amount', value)}
+                  placeholder="Enter amount"
+                  keyboardType="numeric"
+                  placeholderTextColor="#666"
+                />
                 <TouchableOpacity
-                  style={styles.removeImageButton}
-                  onPress={() => updateChequeField(index, 'imageUri', '')}
-                >
-                  <Text style={styles.removeImageText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.imageButtons}>
-                <TouchableOpacity
-                  style={styles.imageButton}
+                  style={styles.cameraIcon}
                   onPress={() => takeChequePhoto(index)}
                 >
-                  <Text style={styles.imageButtonText}>📷 Take Photo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.imageButton}
-                  onPress={() => pickChequeImage(index)}
-                >
-                  <Text style={styles.imageButtonText}>🖼️ Select Photo</Text>
+                  <Text style={styles.cameraIconText}>📷</Text>
                 </TouchableOpacity>
               </View>
-            )}
+            </View>
           </View>
+
+          {/* Row 2: Captured Image below cheque number */}
+          {cheque.imageUri ? (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: cheque.imageUri }} style={styles.image} />
+              <View style={styles.imageActions}>
+                <TouchableOpacity
+                  style={styles.imageActionButton}
+                  onPress={() => pickChequeImage(index)}
+                >
+                  <Text style={styles.imageActionText}>🖼️ Change</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.imageActionButton}
+                  onPress={() => updateChequeField(index, 'imageUri', '')}
+                >
+                  <Text style={styles.imageActionText}>🗑️ Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.noImageContainer}>
+              <Text style={styles.noImageText}>No image captured</Text>
+              <TouchableOpacity
+                style={styles.selectImageButton}
+                onPress={() => pickChequeImage(index)}
+              >
+                <Text style={styles.selectImageText}>🖼️ Select from Gallery</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ))}
     </View>
@@ -404,45 +416,54 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
 
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Amount (₹)</Text>
-        <TextInput
-          style={styles.input}
-          value={slipAmount}
-          onChangeText={setSlipAmount}
-          placeholder="Enter amount"
-          keyboardType="numeric"
-          placeholderTextColor="#666"
-        />
+        <View style={styles.amountWithCamera}>
+          <TextInput
+            style={styles.amountInput}
+            value={slipAmount}
+            onChangeText={setSlipAmount}
+            placeholder="Enter amount"
+            keyboardType="numeric"
+            placeholderTextColor="#666"
+          />
+          <TouchableOpacity
+            style={styles.cameraIcon}
+            onPress={takeSlipPhoto}
+          >
+            <Text style={styles.cameraIconText}>📷</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.imageSection}>
-        <Text style={styles.label}>Slip Photo</Text>
-        {slipImageUri ? (
-          <View style={styles.imageContainer}>
-            <Image source={{ uri: slipImageUri }} style={styles.image} />
+      {/* Slip Image below slip number */}
+      {slipImageUri ? (
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: slipImageUri }} style={styles.image} />
+          <View style={styles.imageActions}>
             <TouchableOpacity
-              style={styles.removeImageButton}
-              onPress={() => setSlipImageUri('')}
-            >
-              <Text style={styles.removeImageText}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.imageButtons}>
-            <TouchableOpacity
-              style={styles.imageButton}
-              onPress={takeSlipPhoto}
-            >
-              <Text style={styles.imageButtonText}>📷 Take Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.imageButton}
+              style={styles.imageActionButton}
               onPress={pickSlipImage}
             >
-              <Text style={styles.imageButtonText}>🖼️ Select Photo</Text>
+              <Text style={styles.imageActionText}>🖼️ Change</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.imageActionButton}
+              onPress={() => setSlipImageUri('')}
+            >
+              <Text style={styles.imageActionText}>🗑️ Remove</Text>
             </TouchableOpacity>
           </View>
-        )}
-      </View>
+        </View>
+      ) : (
+        <View style={styles.noImageContainer}>
+          <Text style={styles.noImageText}>No slip image captured</Text>
+          <TouchableOpacity
+            style={styles.selectImageButton}
+            onPress={pickSlipImage}
+          >
+            <Text style={styles.selectImageText}>🖼️ Select from Gallery</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -599,8 +620,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   paymentModal: {
-    width: '90%',
-    maxWidth: 400,
+    width: '95%',
+    maxWidth: 500,
     backgroundColor: '#fff',
     borderRadius: 20,
     overflow: 'hidden',
@@ -694,6 +715,45 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
+  chequeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  chequeNumberContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  chequeAmountContainer: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  amountWithCamera: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  amountInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+    marginRight: 8,
+  },
+  cameraIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraIconText: {
+    fontSize: 20,
+    color: '#fff',
+  },
   imageSection: {
     marginTop: 10,
   },
@@ -722,6 +782,47 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 8,
     marginBottom: 10,
+  },
+  imageActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 10,
+  },
+  imageActionButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#667eea',
+    marginHorizontal: 5,
+  },
+  imageActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  noImageContainer: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  noImageText: {
+    color: '#666',
+    fontSize: 14,
+    marginBottom: 10,
+  },
+  selectImageButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#667eea',
+  },
+  selectImageText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   removeImageButton: {
     padding: 8,

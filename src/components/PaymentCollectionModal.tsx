@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  TouchableWithoutFeedback,
   ScrollView,
   StyleSheet,
   Alert,
@@ -449,91 +448,91 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
-            <View style={styles.paymentModal}>
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.header}
-              >
-                <Text style={styles.headerTitle}>Collect Payment</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </LinearGradient>
+      <View style={styles.modalOverlay}>
+        <View style={styles.paymentModal}>
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            style={styles.header}
+          >
+            <Text style={styles.headerTitle}>Collect Payment</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </LinearGradient>
 
-              <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Payment Type Selection */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Payment Type</Text>
-                  <View style={styles.paymentTypeContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.paymentTypeButton,
-                        paymentType === 'cash' && styles.paymentTypeButtonActive
-                      ]}
-                      onPress={() => setPaymentType('cash')}
-                    >
-                      <Text style={[
-                        styles.paymentTypeText,
-                        paymentType === 'cash' && styles.paymentTypeTextActive
-                      ]}>💵 Cash</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={[
-                        styles.paymentTypeButton,
-                        paymentType === 'cheque' && styles.paymentTypeButtonActive
-                      ]}
-                      onPress={() => setPaymentType('cheque')}
-                    >
-                      <Text style={[
-                        styles.paymentTypeText,
-                        paymentType === 'cheque' && styles.paymentTypeTextActive
-                      ]}>🏦 Cheque</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={[
-                        styles.paymentTypeButton,
-                        paymentType === 'bank_deposit' && styles.paymentTypeButtonActive
-                      ]}
-                      onPress={() => setPaymentType('bank_deposit')}
-                    >
-                      <Text style={[
-                        styles.paymentTypeText,
-                        paymentType === 'bank_deposit' && styles.paymentTypeTextActive
-                      ]}>📄 Bank Slip</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Dynamic Payment Fields */}
-                {paymentType === 'cash' && renderCashPayment()}
-                {paymentType === 'cheque' && renderChequePayment()}
-                {paymentType === 'bank_deposit' && renderBankDepositPayment()}
-
-                {/* Submit Button */}
+          <ScrollView 
+            style={styles.content} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ flexGrow: 1 }}
+          >
+            {/* Payment Type Selection */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Payment Type</Text>
+              <View style={styles.paymentTypeContainer}>
                 <TouchableOpacity
-                  style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-                  onPress={handleSubmit}
-                  disabled={isSubmitting}
+                  style={[
+                    styles.paymentTypeButton,
+                    paymentType === 'cash' && styles.paymentTypeButtonActive
+                  ]}
+                  onPress={() => setPaymentType('cash')}
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.submitButtonText}>Collect Payment</Text>
-                  )}
+                  <Text style={[
+                    styles.paymentTypeText,
+                    paymentType === 'cash' && styles.paymentTypeTextActive
+                  ]}>💵 Cash</Text>
                 </TouchableOpacity>
-              </ScrollView>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.paymentTypeButton,
+                    paymentType === 'cheque' && styles.paymentTypeButtonActive
+                  ]}
+                  onPress={() => setPaymentType('cheque')}
+                >
+                  <Text style={[
+                    styles.paymentTypeText,
+                    paymentType === 'cheque' && styles.paymentTypeTextActive
+                  ]}>🏦 Cheque</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.paymentTypeButton,
+                    paymentType === 'bank_deposit' && styles.paymentTypeButtonActive
+                  ]}
+                  onPress={() => setPaymentType('bank_deposit')}
+                >
+                  <Text style={[
+                    styles.paymentTypeText,
+                    paymentType === 'bank_deposit' && styles.paymentTypeTextActive
+                  ]}>📄 Bank Slip</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </TouchableWithoutFeedback>
+
+            {/* Dynamic Payment Fields */}
+            {paymentType === 'cash' && renderCashPayment()}
+            {paymentType === 'cheque' && renderChequePayment()}
+            {paymentType === 'bank_deposit' && renderBankDepositPayment()}
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>Collect Payment</Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };

@@ -17,6 +17,7 @@ import { LinearGradient } from 'react-native-linear-gradient';
 import { customerDetailService, Document } from '../services/customerDetailService';
 import PermissionService from '../services/permissionService';
 import { check, PERMISSIONS } from 'react-native-permissions';
+import DocumentPicker from 'react-native-document-picker';
 
 
 
@@ -162,28 +163,42 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         return;
       }
 
-      const options = {
-        mediaType: 'mixed' as const,
-        quality: 1 as const,
-        includeBase64: false,
-        selectionLimit: 1,
-        // Add specific file types for better PDF support
-        includeExtra: true,
-      };
+      // Use DocumentPicker for better document selection
+      const result = await DocumentPicker.pick({
+        type: [
+          DocumentPicker.types.pdf,
+          DocumentPicker.types.doc,
+          DocumentPicker.types.docx,
+          DocumentPicker.types.xls,
+          DocumentPicker.types.xlsx,
+          DocumentPicker.types.allFiles,
+        ],
+        allowMultiSelection: false,
+      });
 
-      const result = await launchImageLibrary(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
+      if (result && result.length > 0) {
+        const file = result[0];
         
         // Handle different file types properly
         let fileType = file.type || 'application/octet-stream';
-        let fileName = file.fileName || `document_${Date.now()}`;
+        let fileName = file.name || `document_${Date.now()}`;
         
-        // Ensure proper file extension
-        if (file.uri && file.uri.toLowerCase().includes('.pdf')) {
-          fileType = 'application/pdf';
+        // Ensure proper file extension based on MIME type
+        if (fileType.includes('pdf')) {
           if (!fileName.toLowerCase().endsWith('.pdf')) {
             fileName += '.pdf';
+          }
+        } else if (fileType.includes('word') || fileType.includes('document')) {
+          if (!fileName.toLowerCase().endsWith('.doc') && !fileName.toLowerCase().endsWith('.docx')) {
+            fileName += fileType.includes('openxml') ? '.docx' : '.doc';
+          }
+        } else if (fileType.includes('excel') || fileType.includes('spreadsheet')) {
+          if (!fileName.toLowerCase().endsWith('.xls') && !fileName.toLowerCase().endsWith('.xlsx')) {
+            fileName += fileType.includes('openxml') ? '.xlsx' : '.xls';
+          }
+        } else if (fileType.includes('text/plain')) {
+          if (!fileName.toLowerCase().endsWith('.txt')) {
+            fileName += '.txt';
           }
         }
         
@@ -191,12 +206,17 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
           uri: file.uri,
           type: fileType,
           name: fileName,
-          size: file.fileSize || 0,
+          size: file.size || 0,
         });
       }
     } catch (error) {
-      console.error('Error picking document:', error);
-      Alert.alert('Error', 'Failed to pick document. Please try again.');
+      if (DocumentPicker.isCancel(error)) {
+        // User cancelled the picker
+        console.log('User cancelled document picker');
+      } else {
+        console.error('Error picking document:', error);
+        Alert.alert('Error', 'Failed to pick document. Please try again.');
+      }
     }
   };
 

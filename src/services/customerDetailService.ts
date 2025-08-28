@@ -76,6 +76,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 seconds timeout
 });
 
 export const customerDetailService = {
@@ -186,23 +187,37 @@ export const customerDetailService = {
     }
   },
 
-  async uploadDocument(formData: FormData): Promise<Document> {
+  async uploadDocument(formData: FormData): Promise<Document[]> {
     try {
       const userData = await getUserData();
       if (!userData?.token) {
         throw new Error('Authentication token not found. Please log out and log back in.');
       }
 
+      console.log('🚀 Uploading document to:', getApiUrl('/ar/documents/upload'));
+      console.log('🔑 Token available:', !!userData.token);
+
       const response = await api.post(getApiUrl('/ar/documents/upload'), formData, {
         headers: {
           'Authorization': `Bearer ${userData.token}`,
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000, // 60 seconds for file uploads
       });
 
+      console.log('✅ Upload successful:', response.status);
       return response.data;
     } catch (error) {
-      console.error('Error uploading document:', error);
+      console.error('❌ Error uploading document:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method,
+      });
       
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error('Session expired. Please log in again.');

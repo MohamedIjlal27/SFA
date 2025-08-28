@@ -39,12 +39,13 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [description, setDescription] = useState('');
-  const [selectedFile, setSelectedFile] = useState<{
+  const [selectedFiles, setSelectedFiles] = useState<Array<{
     uri: string;
     type: string;
     name: string;
     size: number;
-  } | null>(null);
+    id: string;
+  }>>([]);
 
   useEffect(() => {
     if (visible && customerId) {
@@ -93,6 +94,12 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   const takePhoto = async () => {
     const permissionService = PermissionService.getInstance();
     try {
+      // Check if we can add more files
+      if (selectedFiles.length >= 10) {
+        Alert.alert('Maximum Files Reached', 'You can only select up to 10 files. Please remove some files before adding more.');
+        return;
+      }
+
       // Check camera permission dynamically
       const cameraPermission = await check(PERMISSIONS.ANDROID.CAMERA);
       if (cameraPermission !== 'granted') {
@@ -111,12 +118,13 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       const result = await launchCamera(options);
       if (result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        setSelectedFile({
+        setSelectedFiles(prev => [...prev, {
           uri: file.uri || '',
           type: file.type || 'image/jpeg',
           name: file.fileName || `photo_${Date.now()}.jpg`,
           size: file.fileSize || 0,
-        });
+          id: Date.now().toString(),
+        }]);
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -127,6 +135,12 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   const pickImage = async () => {
     const permissionService = PermissionService.getInstance();
     try {
+      // Check if we can add more files
+      if (selectedFiles.length >= 10) {
+        Alert.alert('Maximum Files Reached', 'You can only select up to 10 files. Please remove some files before adding more.');
+        return;
+      }
+
       // Check storage permission dynamically
       const storagePermission = await check(PERMISSIONS.ANDROID.READ_MEDIA_IMAGES);
       if (storagePermission !== 'granted') {
@@ -135,23 +149,25 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         return;
       }
 
+      const remainingSlots = 10 - selectedFiles.length;
       const options = {
         mediaType: 'photo' as const,
         quality: 0.8 as const,
         includeBase64: false,
-        selectionLimit: 1,
+        selectionLimit: remainingSlots, // Allow remaining slots
         includeExtra: true,
       };
 
       const result = await launchImageLibrary(options);
       if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        setSelectedFile({
+        const newFiles = result.assets.map(file => ({
           uri: file.uri || '',
           type: file.type || 'image/jpeg',
           name: file.fileName || `image_${Date.now()}.jpg`,
           size: file.fileSize || 0,
-        });
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        }));
+        setSelectedFiles(prev => [...prev, ...newFiles]);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -162,6 +178,12 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   const pickDocumentFile = async () => {
     const permissionService = PermissionService.getInstance();
     try {
+      // Check if we can add more files
+      if (selectedFiles.length >= 10) {
+        Alert.alert('Maximum Files Reached', 'You can only select up to 10 files. Please remove some files before adding more.');
+        return;
+      }
+
       // Check storage permission dynamically
       const storagePermission = await check(PERMISSIONS.ANDROID.READ_MEDIA_IMAGES);
       if (storagePermission !== 'granted') {
@@ -170,23 +192,25 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         return;
       }
 
+      const remainingSlots = 10 - selectedFiles.length;
       const options = {
         mediaType: 'mixed' as const,
         quality: 0.8 as const,
         includeBase64: false,
-        selectionLimit: 1,
+        selectionLimit: remainingSlots, // Allow remaining slots
         includeExtra: true,
       };
 
       const result = await launchImageLibrary(options);
       if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        setSelectedFile({
+        const newFiles = result.assets.map(file => ({
           uri: file.uri || '',
           type: file.type || 'application/octet-stream',
           name: file.fileName || `document_${Date.now()}.pdf`,
           size: file.fileSize || 0,
-        });
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        }));
+        setSelectedFiles(prev => [...prev, ...newFiles]);
       }
     } catch (error) {
       console.error('Error picking document:', error);
@@ -196,27 +220,38 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
   const pickDocument = async () => {
     try {
+      const alertOptions = [
+        {
+          text: 'Camera',
+          onPress: takePhoto,
+        },
+        {
+          text: Platform.OS === 'android' ? 'Gallery' : 'Photo Library',
+          onPress: pickImage,
+        },
+        {
+          text: 'Documents',
+          onPress: pickDocumentFile,
+        },
+      ];
+
+      // Add Clear All option if there are selected files
+      if (selectedFiles.length > 0) {
+        alertOptions.push({
+          text: 'Clear All Files',
+          onPress: async () => setSelectedFiles([]),
+        });
+      }
+
+      alertOptions.push({
+        text: 'Cancel',
+        onPress: async () => {},
+      });
+
       Alert.alert(
-        'Select Document',
-        'Choose how you want to add a document',
-        [
-          {
-            text: 'Camera',
-            onPress: takePhoto,
-          },
-          {
-            text: Platform.OS === 'android' ? 'Gallery' : 'Photo Library',
-            onPress: pickImage,
-          },
-          {
-            text: 'Documents',
-            onPress: pickDocumentFile,
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ]
+        'Select Files',
+        `Choose how you want to add files${selectedFiles.length > 0 ? ` (${selectedFiles.length} selected)` : ''}`,
+        alertOptions
       );
     } catch (error) {
       console.error('Error picking document:', error);
@@ -224,35 +259,43 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
     }
   };
 
-  const uploadDocument = async (file: any) => {
+  const uploadDocument = async () => {
+    if (selectedFiles.length === 0) {
+      Alert.alert('Error', 'No file selected');
+      return;
+    }
+
     setIsUploading(true);
     try {
-      console.log('Uploading file:', {
-        uri: file.uri,
-        type: file.type,
-        name: file.name,
-        size: file.size
-      });
+      console.log('Uploading files:', selectedFiles.map(f => ({
+        uri: f.uri,
+        type: f.type,
+        name: f.name,
+        size: f.size
+      })));
 
       // Create form data
       const formData = new FormData();
       
       // Ensure proper file object structure
-      const fileObject = {
+      const fileObjects = selectedFiles.map(file => ({
         uri: file.uri,
         type: file.type || 'application/octet-stream',
         name: file.name,
-      };
+      }));
       
       // Convert file URI to proper format for Android
-      let fileUri = file.uri;
-      if (Platform.OS === 'android' && fileUri.startsWith('file://')) {
-        fileUri = fileUri.replace('file://', '');
-      }
+      const processedFileObjects = fileObjects.map(file => {
+        let fileUri = file.uri;
+        if (Platform.OS === 'android' && fileUri.startsWith('file://')) {
+          fileUri = fileUri.replace('file://', '');
+        }
+        return { ...file, uri: fileUri };
+      });
       
-      fileObject.uri = fileUri;
-      
-      formData.append('file', fileObject as any);
+      processedFileObjects.forEach(file => {
+        formData.append('file', file as any);
+      });
       formData.append('customerId', customerId);
       
       if (description.trim()) {
@@ -260,34 +303,55 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
       }
 
       console.log('FormData created, calling uploadDocument service...');
+      console.log('File objects:', processedFileObjects);
+      console.log('Customer ID:', customerId);
+      console.log('Description:', description.trim());
+      
       const response = await customerDetailService.uploadDocument(formData);
       console.log('Upload response:', response);
       
-      Alert.alert('Success', `Document "${file.name}" uploaded successfully!`);
+      const uploadedCount = Array.isArray(response) ? response.length : 1;
+      Alert.alert('Success', `${uploadedCount} document${uploadedCount > 1 ? 's' : ''} uploaded successfully!`);
       setDescription('');
+      setSelectedFiles([]); // Clear the selected files
       await loadDocuments();
       onDocumentUploaded?.();
     } catch (error: any) {
       console.error('Error uploading document:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response,
+        request: error.request,
+        config: error.config
+      });
       
       // Provide more specific error messages
       let errorMessage = 'Failed to upload document';
       
       if (axios.isAxiosError(error)) {
-        if (error.response?.status === 400) {
+        if (error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK') {
+          errorMessage = 'Network error: Please check your internet connection and try again';
+        } else if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Request timeout: Please try again';
+        } else if (error.response?.status === 400) {
           errorMessage = 'Invalid file format or missing required fields';
         } else if (error.response?.status === 413) {
           errorMessage = 'File too large. Maximum size is 10MB';
         } else if (error.response?.status === 401) {
           errorMessage = 'Authentication failed. Please log in again';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error: Please try again later';
         } else if (error.response?.data?.message) {
           errorMessage = error.response.data.message;
+        } else if (error.response?.status) {
+          errorMessage = `Server error (${error.response.status}): Please try again`;
         }
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
       
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Upload Error', errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -410,6 +474,64 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
               </ScrollView>
               
               <View style={styles.uploadSection}>
+                <Text style={styles.uploadSectionTitle}>
+                  Upload Files {selectedFiles.length > 0 ? `(${selectedFiles.length}/10)` : ''}
+                </Text>
+                
+                {/* File Selection Box */}
+                <View style={styles.fileSelectionBox}>
+                  {selectedFiles.length === 0 ? (
+                    <TouchableOpacity 
+                      style={styles.fileDropZone}
+                      onPress={pickDocument}
+                    >
+                      <Text style={styles.fileDropZoneIcon}>📁</Text>
+                      <Text style={styles.fileDropZoneTitle}>Select Files</Text>
+                      <Text style={styles.fileDropZoneSubtitle}>
+                        Tap to choose multiple images or documents
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.selectedFilesContainer}>
+                      {selectedFiles.map((file, index) => (
+                        <View key={file.id} style={styles.selectedFileItem}>
+                          <View style={styles.selectedFileIcon}>
+                            <Text style={styles.selectedFileIconText}>
+                              {getDocumentIcon(file.type)}
+                            </Text>
+                          </View>
+                          <View style={styles.selectedFileInfo}>
+                            <Text style={styles.selectedFileName} numberOfLines={1}>
+                              {file.name}
+                            </Text>
+                            <Text style={styles.selectedFileMeta}>
+                              {formatFileSize(file.size)} • {file.type}
+                            </Text>
+                          </View>
+                          <TouchableOpacity 
+                            style={styles.removeFileButton}
+                            onPress={() => setSelectedFiles(prev => prev.filter(f => f.id !== file.id))}
+                          >
+                            <Text style={styles.removeFileButtonText}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      
+                                             {/* Add More Files Button */}
+                       {selectedFiles.length < 10 && (
+                         <TouchableOpacity 
+                           style={styles.addMoreFilesButton}
+                           onPress={pickDocument}
+                         >
+                           <Text style={styles.addMoreFilesIcon}>➕</Text>
+                           <Text style={styles.addMoreFilesText}>Add More Files</Text>
+                         </TouchableOpacity>
+                       )}
+                    </View>
+                  )}
+                </View>
+
+                {/* Description Input */}
                 <TextInput
                   style={styles.descriptionInput}
                   placeholder="Document description (optional)"
@@ -418,17 +540,30 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
                   multiline
                   numberOfLines={2}
                 />
+
+                {/* Upload Button */}
                 <TouchableOpacity 
-                  style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
-                  onPress={pickDocument}
+                  style={[
+                    styles.uploadButton, 
+                    (selectedFiles.length === 0 || isUploading) && styles.uploadButtonDisabled
+                  ]}
+                  onPress={selectedFiles.length > 0 ? uploadDocument : pickDocument}
                   disabled={isUploading}
                 >
                   {isUploading ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
+                    <>
+                      <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                      <Text style={styles.uploadButtonText}>Uploading...</Text>
+                    </>
+                  ) : selectedFiles.length > 0 ? (
                     <>
                       <Text style={styles.uploadButtonIcon}>📤</Text>
-                      <Text style={styles.uploadButtonText}>Upload Document</Text>
+                      <Text style={styles.uploadButtonText}>Upload Documents</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.uploadButtonIcon}>📁</Text>
+                      <Text style={styles.uploadButtonText}>Select Document</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -575,6 +710,117 @@ const styles = StyleSheet.create({
     borderTopColor: '#E0E0E0',
     paddingTop: 16,
   },
+  uploadSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  fileSelectionBox: {
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
+    padding: 20,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  fileDropZone: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#C0C0C0',
+    borderRadius: 8,
+  },
+  fileDropZoneIcon: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  fileDropZoneTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  fileDropZoneSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  selectedFilesContainer: {
+    width: '100%',
+    marginTop: 10,
+  },
+  selectedFileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#BBDEFB',
+  },
+  selectedFileIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#BBDEFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  selectedFileIconText: {
+    fontSize: 18,
+  },
+  selectedFileInfo: {
+    flex: 1,
+  },
+  selectedFileName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  selectedFileMeta: {
+    fontSize: 12,
+    color: '#666',
+  },
+  removeFileButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  removeFileButtonText: {
+    fontSize: 12,
+    color: 'white',
+  },
+     addMoreFilesButton: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     justifyContent: 'center',
+     backgroundColor: '#E3F2FD',
+     borderWidth: 2,
+     borderColor: '#4A90E2',
+     borderStyle: 'dashed',
+     borderRadius: 8,
+     paddingVertical: 16,
+     marginTop: 12,
+   },
+  addMoreFilesIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+     addMoreFilesText: {
+     color: '#4A90E2',
+     fontWeight: 'bold',
+     fontSize: 14,
+   },
   descriptionInput: {
     borderWidth: 1,
     borderColor: '#E0E0E0',

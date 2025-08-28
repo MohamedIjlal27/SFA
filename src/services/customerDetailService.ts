@@ -79,6 +79,38 @@ const api = axios.create({
   timeout: 30000, // 30 seconds timeout
 });
 
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log('🚀 Making request to:', config.url);
+    console.log('📋 Request method:', config.method);
+    console.log('🔑 Has Authorization header:', !!config.headers.Authorization);
+    return config;
+  },
+  (error: any) => {
+    console.error('❌ Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ Response received:', response.status, response.config.url);
+    return response;
+  },
+  (error: any) => {
+    console.error('❌ Response error:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      message: error.message,
+      code: error.code
+    });
+    return Promise.reject(error);
+  }
+);
+
 export const customerDetailService = {
   async getCustomerDetails(customerId: string): Promise<CustomerDetailsResponse | null> {
     try {
@@ -194,10 +226,15 @@ export const customerDetailService = {
         throw new Error('Authentication token not found. Please log out and log back in.');
       }
 
-      console.log('🚀 Uploading document to:', getApiUrl('/ar/documents/upload'));
+      const uploadUrl = getApiUrl('/ar/documents/upload');
+      console.log('🚀 Uploading document to:', uploadUrl);
       console.log('🔑 Token available:', !!userData.token);
+      console.log('📋 FormData content:');
+      
+      // Log form data contents for debugging
+      console.log('📋 FormData keys:', ['file', 'customerId', 'description']);
 
-      const response = await api.post(getApiUrl('/ar/documents/upload'), formData, {
+      const response = await api.post(uploadUrl, formData, {
         headers: {
           'Authorization': `Bearer ${userData.token}`,
           'Content-Type': 'multipart/form-data',
@@ -209,16 +246,6 @@ export const customerDetailService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error uploading document:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
-        method: error.config?.method,
-      });
-      
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error('Session expired. Please log in again.');
       }

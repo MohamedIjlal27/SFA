@@ -19,6 +19,7 @@ import PermissionService from '../services/permissionService';
 import { check, PERMISSIONS } from 'react-native-permissions';
 // DocumentPicker removed due to React Native 0.81.1 compatibility issues
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
@@ -47,6 +48,34 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
     id: string;
   }>>([]);
 
+  // Local storage key for documents
+  const STORAGE_KEY = `@customer_documents_${customerId}`;
+
+  // Local storage functions
+  const saveDocumentsToStorage = async (docs: Document[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+      console.log('💾 Documents saved to local storage:', docs.length);
+    } catch (error) {
+      console.error('Error saving documents to storage:', error);
+    }
+  };
+
+  const loadDocumentsFromStorage = async (): Promise<Document[]> => {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const docs = JSON.parse(stored);
+        console.log('📂 Loaded documents from storage:', docs.length);
+        return docs;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading documents from storage:', error);
+      return [];
+    }
+  };
+
   useEffect(() => {
     if (visible && customerId) {
       loadDocuments();
@@ -56,11 +85,12 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
   const loadDocuments = async () => {
     setIsLoading(true);
     try {
-      const response = await customerDetailService.getCustomerDocuments(customerId);
-      setDocuments(response.documents);
+      const docs = await loadDocumentsFromStorage();
+      setDocuments(docs);
+      console.log('📚 Loaded documents:', docs.length);
     } catch (error) {
       console.error('Error loading documents:', error);
-      Alert.alert('Error', 'Failed to load documents');
+      Alert.alert('Error', 'Failed to load documents from local storage');
     } finally {
       setIsLoading(false);
     }
@@ -272,120 +302,44 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
     setIsUploading(true);
     try {
-      console.log('Uploading files:', selectedFiles.map(f => ({
-        uri: f.uri,
-        type: f.type,
-        name: f.name,
-        size: f.size
-      })));
+      console.log('📤 Uploading files to local storage:', selectedFiles.length);
 
-      // Create form data
-      const formData = new FormData();
-      
-      // Ensure proper file object structure
-      const fileObjects = selectedFiles.map(file => ({
-        uri: file.uri,
-        type: file.type || 'application/octet-stream',
-        name: file.name,
+      // Create document objects for local storage
+      const newDocuments: Document[] = selectedFiles.map((file, index) => ({
+        id: `local_${Date.now()}_${index}`,
+        customerId: customerId,
+        uploadedBy: 'Demo User',
+        fileName: file.name,
+        originalName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        fileUrl: file.uri, // Store local URI
+        description: description.trim() || undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }));
-      
-      // Convert file URI to proper format for Android
-      const processedFileObjects = fileObjects.map(file => {
-        let fileUri = file.uri;
-        if (Platform.OS === 'android' && fileUri.startsWith('file://')) {
-          fileUri = fileUri.replace('file://', '');
-        }
-        return { ...file, uri: fileUri };
-      });
-      
-      processedFileObjects.forEach(file => {
-        formData.append('file', file as any);
-      });
-      formData.append('customerId', customerId);
-      
-      if (description.trim()) {
-        formData.append('description', description.trim());
-      }
 
-      console.log('FormData created, calling uploadDocument service...');
-      console.log('File objects:', processedFileObjects);
-      console.log('Customer ID:', customerId);
-      console.log('Description:', description.trim());
-      console.log('FormData keys:', ['file', 'customerId', 'description']);
-      console.log('Total files to upload:', processedFileObjects.length);
+      // Get existing documents and add new ones
+      const existingDocs = await loadDocumentsFromStorage();
+      const updatedDocs = [...existingDocs, ...newDocuments];
       
-      const response = await customerDetailService.uploadDocument(formData);
-      console.log('Upload response:', response);
+      // Save to local storage
+      await saveDocumentsToStorage(updatedDocs);
       
-      // Handle both single document and array of documents
-      let uploadedCount = 1;
-      let uploadedDocuments: Document[] = [];
-      
-      if (Array.isArray(response)) {
-        uploadedCount = response.length;
-        uploadedDocuments = response;
-      } else if (response && typeof response === 'object') {
-        uploadedDocuments = [response as Document];
-      } else {
-        console.warn('Unexpected response format:', response);
-      }
-      
-      console.log(`✅ Successfully uploaded ${uploadedCount} document(s):`, uploadedDocuments);
+      console.log(`✅ Successfully saved ${newDocuments.length} document(s) to local storage`);
       
       Alert.alert(
         'Upload Successful', 
-        `${uploadedCount} document${uploadedCount > 1 ? 's' : ''} uploaded successfully!`
+        `${newDocuments.length} document${newDocuments.length > 1 ? 's' : ''} saved to local storage!`
       );
       
       setDescription('');
       setSelectedFiles([]); // Clear the selected files
-      await loadDocuments();
+      await loadDocuments(); // Reload documents
       onDocumentUploaded?.();
     } catch (error: any) {
-      console.error('Error uploading document:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        response: error.response,
-        request: error.request,
-        config: error.config
-      });
-      
-      // Provide more specific error messages
-      let errorMessage = 'Failed to upload document';
-      
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK') {
-          errorMessage = 'Network error: Please check your internet connection and try again';
-        } else if (error.code === 'ECONNABORTED') {
-          errorMessage = 'Request timeout: Please try again';
-        } else if (error.response?.status === 400) {
-          // Handle validation errors from the backend
-          if (error.response.data?.message) {
-            if (Array.isArray(error.response.data.message)) {
-              errorMessage = `Validation errors: ${error.response.data.message.join(', ')}`;
-            } else {
-              errorMessage = error.response.data.message;
-            }
-          } else {
-            errorMessage = 'Invalid file format or missing required fields';
-          }
-        } else if (error.response?.status === 413) {
-          errorMessage = 'File too large. Maximum size is 10MB';
-        } else if (error.response?.status === 401) {
-          errorMessage = 'Authentication failed. Please log in again';
-        } else if (error.response?.status === 500) {
-          errorMessage = 'Server error: Please try again later';
-        } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response?.status) {
-          errorMessage = `Server error (${error.response.status}): Please try again`;
-        }
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Upload Error', errorMessage);
+      console.error('Error saving documents:', error);
+      Alert.alert('Error', 'Failed to save documents to local storage');
     } finally {
       setIsUploading(false);
     }
@@ -402,12 +356,20 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              await customerDetailService.deleteDocument(documentId);
+              // Get existing documents
+              const existingDocs = await loadDocumentsFromStorage();
+              
+              // Remove the document
+              const updatedDocs = existingDocs.filter(doc => doc.id !== documentId);
+              
+              // Save updated documents
+              await saveDocumentsToStorage(updatedDocs);
+              
               Alert.alert('Success', 'Document deleted successfully');
               await loadDocuments();
             } catch (error) {
               console.error('Error deleting document:', error);
-              Alert.alert('Error', 'Failed to delete document');
+              Alert.alert('Error', 'Failed to delete document from local storage');
             }
           },
         },
@@ -417,15 +379,14 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
 
   const openDocument = async (document: Document) => {
     try {
-      // For now, show document details
+      // Show document details
       Alert.alert(
         'Document Details',
-        `Name: ${document.originalName}\nType: ${document.fileType}\nSize: ${formatFileSize(document.fileSize)}\nUploaded: ${formatDate(document.createdAt)}\n${document.description ? `Description: ${document.description}` : ''}`,
+        `Name: ${document.originalName}\nType: ${document.fileType}\nSize: ${formatFileSize(document.fileSize)}\nUploaded: ${formatDate(document.createdAt)}\n${document.description ? `Description: ${document.description}` : ''}\n\nStorage: Local Storage (Demo Mode)`,
         [
           { text: 'Close', style: 'cancel' },
-          { text: 'Download', onPress: () => {
-            // TODO: Implement document download
-            Alert.alert('Info', 'Document download will be implemented soon');
+          { text: 'View File', onPress: () => {
+            Alert.alert('Info', 'File viewing will be implemented in production mode');
           }},
         ]
       );
@@ -509,7 +470,7 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
               
               <View style={styles.uploadSection}>
                 <Text style={styles.uploadSectionTitle}>
-                  Upload Files {selectedFiles.length > 0 ? `(${selectedFiles.length}/10)` : ''}
+                  Upload Files (Demo Mode) {selectedFiles.length > 0 ? `(${selectedFiles.length}/10)` : ''}
                 </Text>
                 
                 {/* File Selection Box */}
@@ -520,9 +481,9 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
                       onPress={pickDocument}
                     >
                       <Text style={styles.fileDropZoneIcon}>📁</Text>
-                      <Text style={styles.fileDropZoneTitle}>Select Files</Text>
+                      <Text style={styles.fileDropZoneTitle}>Select Files (Demo)</Text>
                       <Text style={styles.fileDropZoneSubtitle}>
-                        Tap to choose multiple images or documents
+                        Tap to choose multiple images or documents (saved locally)
                       </Text>
                     </TouchableOpacity>
                   ) : (

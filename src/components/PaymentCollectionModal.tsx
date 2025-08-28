@@ -106,13 +106,18 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
         return;
       }
 
-    const options = {
-      mediaType: 'photo' as const,
-      quality: 0.8 as const,
-      includeBase64: false,
-      saveToPhotos: true,
-    };
+      const options = {
+        mediaType: 'photo' as const,
+        quality: 0.8 as const,
+        includeBase64: false,
+        saveToPhotos: true,
+      };
 
+      const result = await launchCamera(options);
+      if (result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        updateChequeField(index, 'imageUri', file.uri || '');
+      }
     } catch (error) {
       console.error('Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');
@@ -121,12 +126,14 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
 
   const pickChequeImage = async (index: number) => {
     const permissionService = PermissionService.getInstance();
-    const hasPermission = permissionService.getPermissionStatus().storage;
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
-      permissionService.showPermissionSettingsAlert();
-      return;
-    }
+    try {
+      // Check storage permission dynamically
+      const storagePermission = await check(PERMISSIONS.ANDROID.READ_MEDIA_IMAGES);
+      if (storagePermission !== 'granted') {
+        Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
+        permissionService.showPermissionSettingsAlert();
+        return;
+      }
 
     const options = {
       mediaType: 'photo' as const,
@@ -135,12 +142,6 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
       selectionLimit: 1,
     };
 
-    try {
-      const result = await launchImageLibrary(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        updateChequeField(index, 'imageUri', file.uri || '');
-      }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
@@ -158,13 +159,18 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
         return;
       }
 
-    const options = {
-      mediaType: 'photo' as const,
-      quality: 0.8 as const,
-      includeBase64: false,
-      saveToPhotos: true,
-    };
+      const options = {
+        mediaType: 'photo' as const,
+        quality: 0.8 as const,
+        includeBase64: false,
+        saveToPhotos: true,
+      };
 
+      const result = await launchCamera(options);
+      if (result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        setSlipImageUri(file.uri || '');
+      }
     } catch (error) {
       console.error('Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');
@@ -173,12 +179,14 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
 
   const pickSlipImage = async () => {
     const permissionService = PermissionService.getInstance();
-    const hasPermission = permissionService.getPermissionStatus().storage;
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
-      permissionService.showPermissionSettingsAlert();
-      return;
-    }
+    try {
+      // Check storage permission dynamically
+      const storagePermission = await check(PERMISSIONS.ANDROID.READ_MEDIA_IMAGES);
+      if (storagePermission !== 'granted') {
+        Alert.alert('Permission Denied', 'Storage permission is required. Please grant permission in Settings.');
+        permissionService.showPermissionSettingsAlert();
+        return;
+      }
 
     const options = {
       mediaType: 'photo' as const,
@@ -187,12 +195,6 @@ const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
       selectionLimit: 1,
     };
 
-    try {
-      const result = await launchImageLibrary(options);
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        setSlipImageUri(file.uri || '');
-      }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');

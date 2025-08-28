@@ -93,13 +93,23 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         return;
       }
 
-    const options = {
-      mediaType: 'photo' as const,
-      quality: 0.8 as const,
-      includeBase64: false,
-      saveToPhotos: true,
-    };
+      const options = {
+        mediaType: 'photo' as const,
+        quality: 0.8 as const,
+        includeBase64: false,
+        saveToPhotos: true,
+      };
 
+      const result = await launchCamera(options);
+      if (result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        await uploadDocument({
+          uri: file.uri,
+          type: file.type || 'image/jpeg',
+          name: file.fileName || `photo_${Date.now()}.jpg`,
+          size: file.fileSize || 0,
+        });
+      }
     } catch (error) {
       console.error('Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');
@@ -117,14 +127,24 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         return;
       }
 
-    const options = {
-      mediaType: 'photo' as const,
-      quality: 0.8 as const,
-      includeBase64: false,
-      selectionLimit: 1,
-      includeExtra: true,
-    };
+      const options = {
+        mediaType: 'photo' as const,
+        quality: 0.8 as const,
+        includeBase64: false,
+        selectionLimit: 1,
+        includeExtra: true,
+      };
 
+      const result = await launchImageLibrary(options);
+      if (result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        await uploadDocument({
+          uri: file.uri,
+          type: file.type || 'image/jpeg',
+          name: file.fileName || `image_${Date.now()}.jpg`,
+          size: file.fileSize || 0,
+        });
+      }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
@@ -142,15 +162,38 @@ const DocumentsModal: React.FC<DocumentsModalProps> = ({
         return;
       }
 
-    const options = {
-      mediaType: 'mixed' as const,
-      quality: 1 as const,
-      includeBase64: false,
-      selectionLimit: 1,
-      // Add specific file types for better PDF support
-      includeExtra: true,
-    };
+      const options = {
+        mediaType: 'mixed' as const,
+        quality: 1 as const,
+        includeBase64: false,
+        selectionLimit: 1,
+        // Add specific file types for better PDF support
+        includeExtra: true,
+      };
 
+      const result = await launchImageLibrary(options);
+      if (result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        
+        // Handle different file types properly
+        let fileType = file.type || 'application/octet-stream';
+        let fileName = file.fileName || `document_${Date.now()}`;
+        
+        // Ensure proper file extension
+        if (file.uri && file.uri.toLowerCase().includes('.pdf')) {
+          fileType = 'application/pdf';
+          if (!fileName.toLowerCase().endsWith('.pdf')) {
+            fileName += '.pdf';
+          }
+        }
+        
+        await uploadDocument({
+          uri: file.uri,
+          type: fileType,
+          name: fileName,
+          size: file.fileSize || 0,
+        });
+      }
     } catch (error) {
       console.error('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document. Please try again.');

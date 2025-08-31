@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "2032851669",
+    "project_id": "sales-force-automation-107a2",
+    "storage_bucket": "sales-force-automation-107a2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:2032851669:android:b6c3c26f83a43cbb75605c",
+        "android_client_info": {
+          "package_name": "com.sfa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuhEND29jrrec3GlzE850a-HjPyYgcekI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

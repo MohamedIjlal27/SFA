@@ -4,16 +4,14 @@ import { Text, useTheme } from 'react-native-paper';
 import { TaskButton } from './index';
 
 interface DashboardTasksProps {
-  isDayStarted: boolean;
   onStartJourney: () => void;
-  onNewLead: () => void;
+  onViewRoute: () => void;
   onViewDueList: () => void;
 }
 
 const DashboardTasks: React.FC<DashboardTasksProps> = ({
-  isDayStarted,
   onStartJourney,
-  onNewLead,
+  onViewRoute,
   onViewDueList,
 }) => {
   const theme = useTheme();
@@ -30,27 +28,13 @@ const DashboardTasks: React.FC<DashboardTasksProps> = ({
       </Text>
       
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <View style={{ flex: 1 }}>
-          <TaskButton 
-            title="Start Journey"
-            onPress={onStartJourney}
-            disabled={!isDayStarted}
-          />
-          {!isDayStarted && (
-            <Text style={{ 
-              fontSize: 10, 
-              color: theme.colors.error, 
-              marginTop: 4, 
-              textAlign: 'center',
-              fontStyle: 'italic'
-            }}>
-              Start your day first
-            </Text>
-          )}
-        </View>
         <TaskButton 
-          title="New Lead"
-          onPress={onNewLead}
+          title="Start Journey"
+          onPress={onStartJourney}
+        />
+        <TaskButton 
+          title="View Route"
+          onPress={onViewRoute}
         />
         <TaskButton 
           title="View Due List"

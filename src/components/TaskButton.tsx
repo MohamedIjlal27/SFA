@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { MapPin, UserPlus, List } from 'lucide-react-native';
+import { MapPin, UserPlus, List, Route } from 'lucide-react-native';
 import { useTheme } from 'react-native-paper';
 import { createTaskButtonStyles } from '../utils/styles/TaskButton.styles';
 
@@ -20,8 +20,8 @@ const TaskButton: React.FC<TaskButtonProps> = ({ title, onPress, disabled = fals
     switch (title.toLowerCase()) {
       case 'start journey':
         return <MapPin size={24} color={iconColor} />;
-      case 'new lead':
-        return <UserPlus size={24} color={iconColor} />;
+      case 'view route':
+        return <Route size={24} color={iconColor} />;
       case 'view due list':
         return <List size={24} color={iconColor} />;
       default:

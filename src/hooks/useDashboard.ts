@@ -146,7 +146,14 @@ export const useDashboard = () => {
     setSnackbarVisible(true);
   };
 
-  const handleStartJourney = () => navigation.navigate('Journey');
+  const handleStartJourney = () => {
+    if (!isDayStarted) {
+      setSnackbarMessage('Please start your day first before beginning your journey!');
+      setSnackbarVisible(true);
+      return;
+    }
+    navigation.navigate('Journey');
+  };
   const handleViewDueList = () => navigation.navigate('MultiCustomerDueList');
   const handleNewLead = () => {
     setSnackbarMessage('New Lead feature coming soon!');

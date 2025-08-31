@@ -199,9 +199,8 @@ const DashboardScreen = () => {
             {/* Tasks Section */}
             <View style={[styles.section, { marginBottom: 24 }]}> 
               <DashboardTasks
-                isDayStarted={isDayStarted}
                 onStartJourney={handleStartJourney}
-                onNewLead={handleNewLead}
+                onViewRoute={handleNewLead}
                 onViewDueList={handleViewDueList}
               />
             </View>

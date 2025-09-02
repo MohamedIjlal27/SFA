@@ -27,8 +27,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           />
         </View>
         <View style={styles.companyInfo}>
-          <Text variant="titleMedium" style={[styles.companyName, { color: theme.colors.onSurface }]}>
-            LGL Marketing Services (Pvt) Ltd
+          <Text 
+            variant="titleMedium" 
+            style={[styles.companyName, { color: theme.colors.onSurface, fontSize: 20 }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            CEYLOAN MARKETING AND DISTRIBUTORS (Pvt) Ltd
+          </Text>
+          <Text variant="bodySmall" style={[styles.companySubtitle, { color: theme.colors.onSurfaceVariant }]}>
+            HARWARE SOLUTIONS
           </Text>
           <Text variant="bodySmall" style={[styles.companySubtitle, { color: theme.colors.onSurfaceVariant }]}>
             Sales Force Automation

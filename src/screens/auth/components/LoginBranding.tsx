@@ -10,7 +10,7 @@ const LoginBranding: React.FC<LoginBrandingProps> = ({ styles }) => {
     <View style={styles.brandingContainer}>
       <Text style={styles.synqopsLogoText}>SYNQOPS</Text>
       <Text style={styles.copyrightText}>
-        © All Rights Reserved - SYNQOPS (2025)
+        © All Rights Reserved - FLOWCENTRA TECHNOLOGIES (Pvt) Ltd (2025)
       </Text>
     </View>
   );

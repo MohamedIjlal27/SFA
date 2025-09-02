@@ -147,7 +147,7 @@ const JourneyScreen: React.FC<Props> = ({ navigation }) => {
           ]
         );
       } else {
-        Alert.alert('Error', 'Failed to sync customer list');
+        Alert.alert('Error', error?.message || 'Failed to sync customer list');
       }
     } finally {
       setIsSyncing(false);
@@ -711,10 +711,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
+    textAlign: 'left',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 'auto',
   },
   syncTimeText: {
     fontSize: 12,

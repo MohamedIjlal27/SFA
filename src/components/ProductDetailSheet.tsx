@@ -32,19 +32,17 @@ const ProductDetailSheet: React.FC<Props> = ({
 }) => {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const currentProduct = products[currentIndex];
   const theme = useTheme();
 
-  const handleNextProduct = () => {
-    if (currentIndex < products.length - 1) {
-      onIndexChange(currentIndex + 1);
-    }
+  // Image navigation within current product
+  const handleNextImage = (total: number) => {
+    setSelectedImageIndex((idx) => (total > 0 ? Math.min(total - 1, idx + 1) : 0));
   };
 
-  const handlePreviousProduct = () => {
-    if (currentIndex > 0) {
-      onIndexChange(currentIndex - 1);
-    }
+  const handlePreviousImage = () => {
+    setSelectedImageIndex((idx) => Math.max(0, idx - 1));
   };
 
   const handleFeedbackSubmit = async (feedbackData: FeedbackData) => {
@@ -79,8 +77,12 @@ const ProductDetailSheet: React.FC<Props> = ({
     return null;
   }
 
-  // Check if product has a valid image URL
-  const hasValidImage = currentProduct.imageUrl && currentProduct.imageUrl.trim() !== '';
+  // Build array of image URLs from CSV or single URL
+  const imageUrls = (currentProduct?.imageUrl || '')
+    .split(',')
+    .map((u) => u.trim())
+    .filter((u) => u.length > 0);
+  const hasValidImage = imageUrls.length > 0;
 
   return (
     <Portal>
@@ -115,10 +117,10 @@ const ProductDetailSheet: React.FC<Props> = ({
               <View style={styles.navigationContainer}>
                 <IconButton
                   icon="chevron-left"
-                  onPress={handlePreviousProduct}
-                  disabled={currentIndex === 0}
+                  onPress={handlePreviousImage}
+                  disabled={selectedImageIndex === 0}
                   style={styles.navButton}
-                  iconColor={currentIndex === 0 ? 'rgba(0,0,0,0.26)' : theme.colors.primary}
+                  iconColor={selectedImageIndex === 0 ? 'rgba(0,0,0,0.26)' : theme.colors.primary}
                   size={28}
                 />
                 <View style={styles.imageContainer}>
@@ -131,7 +133,7 @@ const ProductDetailSheet: React.FC<Props> = ({
                   >
                     <Image
                       source={{ 
-                        uri: hasValidImage ? currentProduct.imageUrl : 'https://via.placeholder.com/300x300?text=No+Image'
+                        uri: hasValidImage ? imageUrls[selectedImageIndex] : 'https://via.placeholder.com/300x300?text=No+Image'
                       }}
                       style={styles.image}
                       resizeMode="contain"
@@ -147,12 +149,35 @@ const ProductDetailSheet: React.FC<Props> = ({
                     />
                   )}
                 </View>
+                {hasValidImage && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={{ marginTop: 8 }}
+                  >
+                    {imageUrls.map((url, index) => (
+                      <Button
+                        key={index}
+                        mode="text"
+                        onPress={() => setSelectedImageIndex(index)}
+                        style={{ padding: 0, marginRight: 8 }}
+                        contentStyle={{ padding: 0 }}
+                      >
+                        <Image
+                          source={{ uri: url }}
+                          style={{ width: 60, height: 60, borderRadius: 8, borderWidth: selectedImageIndex === index ? 2 : 1, borderColor: selectedImageIndex === index ? theme.colors.primary : '#E5E7EB' }}
+                          resizeMode="cover"
+                        />
+                      </Button>
+                    ))}
+                  </ScrollView>
+                )}
                 <IconButton
                   icon="chevron-right"
-                  onPress={handleNextProduct}
-                  disabled={currentIndex === products.length - 1}
+                  onPress={() => handleNextImage(imageUrls.length)}
+                  disabled={selectedImageIndex >= Math.max(0, imageUrls.length - 1)}
                   style={styles.navButton}
-                  iconColor={currentIndex === products.length - 1 ? 'rgba(0,0,0,0.26)' : theme.colors.primary}
+                  iconColor={selectedImageIndex >= Math.max(0, imageUrls.length - 1) ? 'rgba(0,0,0,0.26)' : theme.colors.primary}
                   size={28}
                 />
               </View>
@@ -228,11 +253,11 @@ const ProductDetailSheet: React.FC<Props> = ({
       </Modal>
       <Modal visible={imageViewerVisible} transparent={true}>
         <ImageViewer
-          imageUrls={hasValidImage ? [{ url: currentProduct.imageUrl! }] : []}
+          imageUrls={imageUrls.map((u) => ({ url: u }))}
           enableSwipeDown
           onSwipeDown={() => setImageViewerVisible(false)}
           onClick={() => setImageViewerVisible(false)}
-          index={0}
+          index={selectedImageIndex}
           saveToLocalByLongPress={false}
         />
       </Modal>

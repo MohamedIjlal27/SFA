@@ -34,6 +34,7 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [showSpecifications, setShowSpecifications] = useState(false);
   const [localQuantity, setLocalQuantity] = useState(1);
@@ -198,7 +199,16 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   }
 
-  const hasValidImage = product.imageUrl && product.imageUrl.trim() !== '';
+  const imageUrls = (product.imageUrl || '')
+    .split(',')
+    .map(u => u.trim())
+    .filter(u => u.length > 0);
+  const hasValidImage = imageUrls.length > 0;
+
+  // Reset selected image when product changes
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [product.itemCode]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -264,18 +274,21 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
         >
         {/* Enhanced Product Image Section */}
         <View style={styles.imageSection}>
-          <TouchableOpacity
-            style={styles.imageContainer}
-            onPress={() => hasValidImage && setImageViewerVisible(true)}
-            disabled={!hasValidImage}
-          >
-            <Image
-              source={{ 
-                uri: hasValidImage ? product.imageUrl : 'https://via.placeholder.com/400x400?text=No+Image'
-              }}
-              style={styles.productImage}
-              resizeMode="contain"
-            />
+          <View style={styles.imageContainer}>
+            <TouchableOpacity
+              onPress={() => hasValidImage && setImageViewerVisible(true)}
+              disabled={!hasValidImage}
+              activeOpacity={0.8}
+              style={{ flex: 1 }}
+            >
+              <Image
+                source={{ 
+                  uri: hasValidImage ? imageUrls[Math.min(Math.max(0, selectedImageIndex), Math.max(0, imageUrls.length - 1))] : 'https://via.placeholder.com/400x400?text=No+Image'
+                }}
+                style={styles.productImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
             {hasValidImage && (
               <View style={styles.zoomOverlay}>
                 <IconButton
@@ -286,36 +299,56 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
                 />
               </View>
             )}
-            
-            {/* Navigation Arrows */}
-            {currentIndex > 0 && (
-              <TouchableOpacity
-                style={styles.navArrowLeft}
-                onPress={handleSwipeRight}
-              >
-                <IconButton
-                  icon="chevron-left"
-                  size={28}
-                  iconColor="white"
-                  style={styles.navArrowIcon}
-                />
-              </TouchableOpacity>
+            {/* Image navigation arrows (within current product images) */}
+            {hasValidImage && imageUrls.length > 1 && (
+              <>
+                <TouchableOpacity
+                  style={styles.navArrowLeft}
+                  onPress={() => setSelectedImageIndex((i) => Math.max(0, i - 1))}
+                  disabled={selectedImageIndex === 0}
+                >
+                  <IconButton
+                    icon="chevron-left"
+                    size={28}
+                    iconColor="white"
+                    style={styles.navArrowIcon}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.navArrowRight}
+                  onPress={() => setSelectedImageIndex((i) => Math.min(imageUrls.length - 1, i + 1))}
+                  disabled={selectedImageIndex >= imageUrls.length - 1}
+                >
+                  <IconButton
+                    icon="chevron-right"
+                    size={28}
+                    iconColor="white"
+                    style={styles.navArrowIcon}
+                  />
+                </TouchableOpacity>
+              </>
             )}
-            
-            {currentIndex < allProducts.length - 1 && (
-              <TouchableOpacity
-                style={styles.navArrowRight}
-                onPress={handleSwipeLeft}
-              >
-                <IconButton
-                  icon="chevron-right"
-                  size={28}
-                  iconColor="white"
-                  style={styles.navArrowIcon}
-                />
-              </TouchableOpacity>
-            )}
-          </TouchableOpacity>
+          </View>
+
+          {/* Thumbnails */}
+          {hasValidImage && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: 10 }}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+            >
+              {imageUrls.map((url, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => setSelectedImageIndex(idx)}
+                  style={{ marginRight: 8, borderWidth: 2, borderColor: idx === selectedImageIndex ? '#4A90E2' : '#E5E7EB', borderRadius: 8 }}
+                >
+                  <Image source={{ uri: url }} style={{ width: 64, height: 64, borderRadius: 6 }} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
           
           {/* Product Badges */}
           <View style={styles.badgeContainer}>
@@ -544,11 +577,11 @@ const ProductDetailsScreen: React.FC<Props> = ({ route, navigation }) => {
       {/* Image Viewer Modal */}
       {imageViewerVisible && hasValidImage && (
         <ImageViewer
-          imageUrls={[{ url: product.imageUrl! }]}
+          imageUrls={imageUrls.map(u => ({ url: u }))}
           enableSwipeDown
           onSwipeDown={() => setImageViewerVisible(false)}
           onClick={() => setImageViewerVisible(false)}
-          index={0}
+          index={selectedImageIndex}
           saveToLocalByLongPress={false}
         />
       )}

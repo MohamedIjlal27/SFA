@@ -8,7 +8,7 @@ interface LoginBrandingProps {
 const LoginBranding: React.FC<LoginBrandingProps> = ({ styles }) => {
   return (
     <View style={styles.brandingContainer}>
-      <Text style={styles.synqopsLogoText}>SYNQOPS</Text>
+      <Text style={styles.synqopsLogoText}>FLOCENTRA</Text>
       <Text style={styles.copyrightText}>
         © All Rights Reserved - FLOWCENTRA TECHNOLOGIES (Pvt) Ltd (2025)
       </Text>
